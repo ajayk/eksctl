@@ -274,8 +274,6 @@ func ResolveAMI(provider api.ClusterProvider, version string, ng *api.NodeGroup)
 		resolver = ami.NewAutoResolver(provider.EC2())
 	case api.NodeImageResolverAutoSSM:
 		resolver = ami.NewSSMResolver(provider.SSM())
-	case api.NodeImageResolverStatic:
-		resolver = ami.NewStaticResolver()
 	default:
 		resolver = ami.NewMultiResolver(
 			ami.NewSSMResolver(provider.SSM()),
