@@ -171,8 +171,6 @@ const (
 	// NodeImageFamilyWindowsServer2004CoreContainer represents Windows 2004 core container family
 	NodeImageFamilyWindowsServer2004CoreContainer = "WindowsServer2004CoreContainer"
 
-	// NodeImageResolverStatic represents static AMI resolver (see ami package)
-	NodeImageResolverStatic = "static"
 	// NodeImageResolverAuto represents auto AMI resolver (see ami package)
 	NodeImageResolverAuto = "auto"
 	// NodeImageResolverAutoSSM is used to indicate that the latest EKS AMIs should be used for the nodes. The AMI is selected
