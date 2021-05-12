@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+
 	cfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
@@ -19,14 +21,15 @@ import (
 type ClusterResourceSet struct {
 	rs                   *resourceSet
 	spec                 *api.ClusterConfig
-	provider             api.ClusterProvider
+	ec2API               ec2iface.EC2API
+	region               string
 	supportsManagedNodes bool
 	vpcResourceSet       *VPCResourceSet
 	securityGroups       []*gfnt.Value
 }
 
 // NewClusterResourceSet returns a resource set for the new cluster
-func NewClusterResourceSet(provider api.ClusterProvider, spec *api.ClusterConfig, supportsManagedNodes bool, existingStack *gjson.Result) *ClusterResourceSet {
+func NewClusterResourceSet(ec2API ec2iface.EC2API, region string, spec *api.ClusterConfig, supportsManagedNodes bool, existingStack *gjson.Result) *ClusterResourceSet {
 	if existingStack != nil {
 		unsetExistingResources(existingStack, spec)
 	}
@@ -34,28 +37,15 @@ func NewClusterResourceSet(provider api.ClusterProvider, spec *api.ClusterConfig
 	return &ClusterResourceSet{
 		rs:                   rs,
 		spec:                 spec,
-		provider:             provider,
+		ec2API:               ec2API,
+		region:               region,
 		supportsManagedNodes: supportsManagedNodes,
-		vpcResourceSet:       NewVPCResourceSet(rs, spec, provider),
-	}
-}
-
-// unsetExistingResources unsets fields for CloudFormation resources that were created by eksctl (and not user-supplied)
-// in order to trigger execution of code that relies on these fields
-func unsetExistingResources(existingStack *gjson.Result, clusterConfig *api.ClusterConfig) {
-	controlPlaneSG := existingStack.Get(cfnControlPlaneSGResource)
-	if controlPlaneSG.Exists() {
-		clusterConfig.VPC.SecurityGroup = ""
-	}
-	sharedNodeSG := existingStack.Get(cfnSharedNodeSGResource)
-	if sharedNodeSG.Exists() {
-		clusterConfig.VPC.SharedNodeSecurityGroup = ""
+		vpcResourceSet:       NewVPCResourceSet(rs, spec, ec2API),
 	}
 }
 
 // AddAllResources adds all the information about the cluster to the resource set
 func (c *ClusterResourceSet) AddAllResources() error {
-
 	if err := c.spec.HasSufficientSubnets(); err != nil {
 		return err
 	}
@@ -69,7 +59,7 @@ func (c *ClusterResourceSet) AddAllResources() error {
 	clusterSG := c.addResourcesForSecurityGroups(vpcResource)
 
 	if privateCluster := c.spec.PrivateCluster; privateCluster.Enabled {
-		vpcEndpointResourceSet := NewVPCEndpointResourceSet(c.provider, c.rs, c.spec, vpcResource.VPC, vpcResource.SubnetDetails.Private, clusterSG.ClusterSharedNode)
+		vpcEndpointResourceSet := NewVPCEndpointResourceSet(c.ec2API, c.region, c.rs, c.spec, vpcResource.VPC, vpcResource.SubnetDetails.Private, clusterSG.ClusterSharedNode)
 
 		if err := vpcEndpointResourceSet.AddResources(); err != nil {
 			return errors.Wrap(err, "error adding resources for VPC endpoints")
@@ -114,10 +104,28 @@ func (c *ClusterResourceSet) Template() gfn.Template {
 	return *c.rs.template
 }
 
+// GetAllOutputs collects all outputs of the cluster
+func (c *ClusterResourceSet) GetAllOutputs(stack cfn.Stack) error {
+	return c.rs.GetAllOutputs(stack)
+}
+
 // HasManagedNodesSG reports whether the stack has the security group required for communication between
 // managed and unmanaged nodegroups
 func HasManagedNodesSG(stackResources *gjson.Result) bool {
 	return stackResources.Get(cfnIngressClusterToNodeSGResource).Exists()
+}
+
+// unsetExistingResources unsets fields for CloudFormation resources that were created by eksctl (and not user-supplied)
+// in order to trigger execution of code that relies on these fields
+func unsetExistingResources(existingStack *gjson.Result, clusterConfig *api.ClusterConfig) {
+	controlPlaneSG := existingStack.Get(cfnControlPlaneSGResource)
+	if controlPlaneSG.Exists() {
+		clusterConfig.VPC.SecurityGroup = ""
+	}
+	sharedNodeSG := existingStack.Get(cfnSharedNodeSGResource)
+	if sharedNodeSG.Exists() {
+		clusterConfig.VPC.SharedNodeSecurityGroup = ""
+	}
 }
 
 func (c *ClusterResourceSet) newResource(name string, resource gfn.Resource) *gfnt.Value {
@@ -137,12 +145,12 @@ func (c *ClusterResourceSet) addResourcesForControlPlane(subnetDetails *subnetDe
 	}
 
 	var encryptionConfigs []gfneks.Cluster_EncryptionConfig
-	if c.spec.SecretsEncryption != nil && c.spec.SecretsEncryption.KeyARN != nil {
+	if c.spec.SecretsEncryption != nil && c.spec.SecretsEncryption.KeyARN != "" {
 		encryptionConfigs = []gfneks.Cluster_EncryptionConfig{
 			{
 				Resources: gfnt.NewSlice(gfnt.NewString("secrets")),
 				Provider: &gfneks.Cluster_Provider{
-					KeyArn: gfnt.NewString(*c.spec.SecretsEncryption.KeyARN),
+					KeyArn: gfnt.NewString(c.spec.SecretsEncryption.KeyARN),
 				},
 			},
 		}
@@ -197,10 +205,5 @@ func (c *ClusterResourceSet) addResourcesForControlPlane(subnetDetails *subnetDe
 }
 
 func (c *ClusterResourceSet) addResourcesForFargate() {
-	_ = AddResourcesForFargate(c.rs, c.spec)
-}
-
-// GetAllOutputs collects all outputs of the cluster
-func (c *ClusterResourceSet) GetAllOutputs(stack cfn.Stack) error {
-	return c.rs.GetAllOutputs(stack)
+	_ = addResourcesForFargate(c.rs, c.spec)
 }

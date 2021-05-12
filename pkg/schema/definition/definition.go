@@ -46,7 +46,8 @@ func (dg *Generator) newStructDefinition(name string, typeSpec ast.Expr, structC
 		var required []string
 		var preferredOrder []string
 		var properties map[string]*Definition
-		if len(field.Names) == 0 {
+		// If we are embedded and don't specify a JSON field name
+		if len(field.Names) == 0 && fieldName == "" {
 			// We have to handle an embedded field, get its definition
 			// and deconstruct it into this def
 			ref, _ := dg.newPropertyRef("", field.Type, fieldDoc, true)
@@ -54,12 +55,19 @@ func (dg *Generator) newStructDefinition(name string, typeSpec ast.Expr, structC
 			preferredOrder = ref.PreferredOrder
 			required = ref.Required
 		} else {
-			if fieldName == "" {
+			if fieldName == "" || fieldName == "-" {
 				// private field
 				continue
 			}
 
-			field, isRequired := dg.newPropertyRef(field.Names[0].Name, field.Type, fieldDoc, false)
+			// For embedded types
+			refName := ""
+			// For non-embedded types
+			if len(field.Names) > 0 {
+				refName = field.Names[0].Name
+			}
+
+			field, isRequired := dg.newPropertyRef(refName, field.Type, fieldDoc, false)
 			preferredOrder = []string{fieldName}
 			properties = map[string]*Definition{
 				fieldName: field,
@@ -70,7 +78,10 @@ func (dg *Generator) newStructDefinition(name string, typeSpec ast.Expr, structC
 				required = []string{fieldName}
 			}
 
-			def.AdditionalProperties = false
+			// Setting additional properties prevents oneOf from working
+			if len(def.OneOf) == 0 {
+				def.AdditionalProperties = false
+			}
 		}
 
 		def.PreferredOrder = append(def.PreferredOrder, preferredOrder...)

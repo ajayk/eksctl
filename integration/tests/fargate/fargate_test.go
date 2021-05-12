@@ -24,8 +24,6 @@ func init() {
 	// Call testing.Init() prior to tests.NewParams(), as otherwise -test.* will not be recognised. See also: https://golang.org/doc/go1.13#testing
 	testing.Init()
 	params = tests.NewParams("fgate")
-	// Fargate is not supported in us-west-2 yet:
-	params.SetRegion("ap-northeast-1")
 }
 
 func TestFargate(t *testing.T) {
@@ -56,7 +54,7 @@ var _ = Describe("(Integration) Fargate", func() {
 			"--verbose", "4",
 			"--kubeconfig", params.KubeconfigPath,
 			"--nodes", "1",
-			"--timeout", "35m",
+			"--timeout", "1h10m",
 		}
 
 		args = append(args, createArgs...)

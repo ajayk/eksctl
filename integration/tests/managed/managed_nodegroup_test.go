@@ -3,6 +3,9 @@
 package managed
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -57,25 +60,25 @@ var _ = Describe("(Integration) Create Managed Nodegroups", func() {
 
 	defaultTimeout := 20 * time.Minute
 
-	Describe("when creating a cluster with 1 managed nodegroup", func() {
-		It("should not return an error", func() {
-			fmt.Fprintf(GinkgoWriter, "Using kubeconfig: %s\n", params.KubeconfigPath)
+	BeforeSuite(func() {
+		fmt.Fprintf(GinkgoWriter, "Using kubeconfig: %s\n", params.KubeconfigPath)
 
-			cmd := params.EksctlCreateCmd.WithArgs(
-				"cluster",
-				"--verbose", "4",
-				"--name", params.ClusterName,
-				"--tags", "alpha.eksctl.io/description=eksctl integration test",
-				"--managed",
-				"--nodegroup-name", initialNodeGroup,
-				"--node-labels", "ng-name="+initialNodeGroup,
-				"--nodes", "2",
-				"--version", params.Version,
-				"--kubeconfig", params.KubeconfigPath,
-			)
-			Expect(cmd).To(RunSuccessfully())
-		})
+		cmd := params.EksctlCreateCmd.WithArgs(
+			"cluster",
+			"--verbose", "4",
+			"--name", params.ClusterName,
+			"--tags", "alpha.eksctl.io/description=eksctl integration test",
+			"--managed",
+			"--nodegroup-name", initialNodeGroup,
+			"--node-labels", "ng-name="+initialNodeGroup,
+			"--nodes", "2",
+			"--version", params.Version,
+			"--kubeconfig", params.KubeconfigPath,
+		)
+		Expect(cmd).To(RunSuccessfully())
+	})
 
+	Context("cluster with 1 managed nodegroup", func() {
 		It("should have created an EKS cluster and two CloudFormation stacks", func() {
 			awsSession := NewSession(params.Region)
 
@@ -101,6 +104,18 @@ var _ = Describe("(Integration) Create Managed Nodegroups", func() {
 			It("should return the previously created cluster", func() {
 				cmd := params.EksctlGetCmd.WithArgs("clusters", "--all-regions")
 				Expect(cmd).To(RunSuccessfullyWithOutputString(ContainSubstring(params.ClusterName)))
+			})
+		})
+
+		Context("and checking the nodegroup health", func() {
+			It("should return healthy", func() {
+				cmd := params.EksctlUtilsCmd.WithArgs(
+					"nodegroup-health",
+					"--cluster", params.ClusterName,
+					"--name", initialNodeGroup,
+				)
+
+				Expect(cmd).To(RunSuccessfullyWithOutputString(ContainSubstring("active")))
 			})
 		})
 
@@ -231,7 +246,7 @@ var _ = Describe("(Integration) Create Managed Nodegroups", func() {
 		Context("and upgrading a nodegroup", func() {
 			It("should upgrade to the next Kubernetes version", func() {
 				By("updating the control plane version")
-				cmd := params.EksctlUpdateCmd.
+				cmd := params.EksctlUpgradeCmd.
 					WithArgs(
 						"cluster",
 						"--verbose", "4",
@@ -266,6 +281,72 @@ var _ = Describe("(Integration) Create Managed Nodegroups", func() {
 					"--kubernetes-version", nextVersion,
 				)
 				Expect(cmd).To(RunSuccessfullyWithOutputString(ContainSubstring("nodegroup successfully upgraded")))
+			})
+		})
+
+		Context("and creating a nodegroup with taints", func() {
+			It("should create nodegroups with taints applied", func() {
+				taints := []api.NodeGroupTaint{
+					{
+						Key:    "key1",
+						Value:  "value1",
+						Effect: "NoSchedule",
+					},
+					{
+						Key:    "key2",
+						Effect: "NoSchedule",
+					},
+					{
+						Key:    "key3",
+						Value:  "value2",
+						Effect: "NoExecute",
+					},
+				}
+				clusterConfig := api.NewClusterConfig()
+				clusterConfig.Metadata.Name = params.ClusterName
+				clusterConfig.Metadata.Region = params.Region
+				clusterConfig.Metadata.Version = params.Version
+				clusterConfig.ManagedNodeGroups = []*api.ManagedNodeGroup{
+					{
+						NodeGroupBase: &api.NodeGroupBase{
+							Name: "taints",
+						},
+						Taints: taints,
+					},
+				}
+
+				data, err := json.Marshal(clusterConfig)
+				Expect(err).ToNot(HaveOccurred())
+
+				cmd := params.EksctlCreateCmd.
+					WithArgs(
+						"nodegroup",
+						"--config-file", "-",
+						"--verbose", "4",
+					).
+					WithoutArg("--region", params.Region).
+					WithStdin(bytes.NewReader(data))
+				Expect(cmd).To(RunSuccessfully())
+
+				config, err := clientcmd.BuildConfigFromFlags("", params.KubeconfigPath)
+				Expect(err).ToNot(HaveOccurred())
+				clientset, err := kubernetes.NewForConfig(config)
+				Expect(err).ToNot(HaveOccurred())
+
+				nodeList, err := clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
+					LabelSelector: fmt.Sprintf("%s=%s", api.NodeGroupNameLabel, "taints"),
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				for _, node := range nodeList.Items {
+					for i, t := range node.Spec.Taints {
+						expected := taints[i]
+						Expect(t.Key).To(Equal(expected.Key))
+						Expect(t.Value).To(Equal(expected.Value))
+						Expect(t.Effect).To(Equal(expected.Effect))
+					}
+				}
+
 			})
 		})
 

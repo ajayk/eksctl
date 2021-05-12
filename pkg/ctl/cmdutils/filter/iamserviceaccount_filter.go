@@ -57,6 +57,9 @@ func (f *IAMServiceAccountFilter) SetExcludeExistingFilter(stackManager serviceA
 
 	if !overrideExistingServiceAccounts {
 		err := f.ForEach(serviceAccounts, func(_ int, sa *api.ClusterIAMServiceAccount) error {
+			if api.IsEnabled(sa.RoleOnly) {
+				return nil
+			}
 			exists, err := kubernetes.CheckServiceAccountExists(clientSet, sa.ClusterIAMMeta.AsObjectMeta())
 			if err != nil {
 				return err
@@ -74,9 +77,9 @@ func (f *IAMServiceAccountFilter) SetExcludeExistingFilter(stackManager serviceA
 	return f.doSetExcludeExistingFilter(existing, "iamserviceaccount")
 }
 
-// SetIncludeOrExcludeMissingFilter uses stackManager to list existing iamserviceaccount stacks and configures
+// SetDeleteFilter uses stackManager to list existing iamserviceaccount stacks and configures
 // the filter to either explictily exluce or include iamserviceaccounts that are missing from given serviceAccounts
-func (f *IAMServiceAccountFilter) SetIncludeOrExcludeMissingFilter(lister serviceAccountLister, includeOnlyMissing bool, serviceAccounts *[]*api.ClusterIAMServiceAccount) error {
+func (f *IAMServiceAccountFilter) SetDeleteFilter(lister serviceAccountLister, includeOnlyMissing bool, cfg *api.ClusterConfig) error {
 	existing, err := lister.ListIAMServiceAccountStacks()
 	if err != nil {
 		return err
@@ -86,6 +89,15 @@ func (f *IAMServiceAccountFilter) SetIncludeOrExcludeMissingFilter(lister servic
 	local := sets.NewString()
 	var explicitIncludes []string
 
+	// if we're doing onlyMissing, that means the user _probably_ doesn't want
+	// to delete the aws-node service account
+	// if they do, they can explicitly delete it by calling `delete
+	// iamserviceaccount` either explicitly with `--name aws-node` or by leaving
+	// out `--only-missing` and listing it
+	if includeOnlyMissing {
+		cfg.IAM.ServiceAccounts = api.IAMServiceAccountsWithImplicitServiceAccounts(cfg)
+	}
+	serviceAccounts := &cfg.IAM.ServiceAccounts
 	for _, localServiceAccount := range *serviceAccounts {
 		localServiceAccountName := localServiceAccount.NameString()
 		local.Insert(localServiceAccountName)

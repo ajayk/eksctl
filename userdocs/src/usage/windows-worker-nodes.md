@@ -1,6 +1,6 @@
 # Windows Worker Nodes
 
-Amazon EKS 1.14 supports [Windows Nodes][eks-user-guide] that allow running Windows containers.
+From version 1.14, Amazon EKS supports [Windows Nodes][eks-user-guide] that allow running Windows containers.
 In addition to having Windows nodes, a Linux node in the cluster is required to run the VPC resource controller and CoreDNS, as Microsoft doesn't support host-networking mode yet. Thus, a Windows EKS cluster will be a mixed-mode cluster containing Windows nodes and at least one Linux node.
 The Linux nodes are critical to the functioning of the cluster, and thus, for a production-grade cluster, it's recommended to have at least two `t2.large` Linux nodes for HA.
 
@@ -51,7 +51,7 @@ To enable running Windows workloads on an existing cluster with Linux nodes (`Am
 
 ```console
 eksctl create nodegroup --cluster=existing-cluster --node-ami-family=WindowsServer2019CoreContainer
-eksctl utils install-vpc-controllers --cluster=windows-cluster --approve
+eksctl utils install-vpc-controllers --cluster=existing-cluster --approve
 ```
 
 To ensure workloads are scheduled on the right OS, they must have a `nodeSelector` targeting the OS it must run on:
@@ -59,14 +59,17 @@ To ensure workloads are scheduled on the right OS, they must have a `nodeSelecto
 ```yaml
 # Targeting Windows
   nodeSelector:
-    beta.kubernetes.io/os: windows
-    beta.kubernetes.io/arch: amd64
+    kubernetes.io/os: windows
+    kubernetes.io/arch: amd64
 
 # Targeting Linux
   nodeSelector:
-    beta.kubernetes.io/os: linux
-    beta.kubernetes.io/arch: amd64
+    kubernetes.io/os: linux
+    kubernetes.io/arch: amd64
 ```
+
+If you are using a cluster older than `1.19` the `kubernetes.io/os` and `kubernetes.io/arch` labels need to be replaced with `beta.kubernetes.io/os` and `beta.kubernetes.io/arch` respectively.
+
 ### Further information
 
 - [EKS Windows Support][eks-user-guide]

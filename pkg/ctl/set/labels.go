@@ -1,14 +1,15 @@
 package set
 
 import (
+	"github.com/kris-nova/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/weaveworks/eksctl/pkg/actions/label"
 	"github.com/weaveworks/eksctl/pkg/cfn/manager"
 	"github.com/weaveworks/eksctl/pkg/managed"
 
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/ctl/cmdutils"
-	"github.com/weaveworks/eksctl/pkg/eks"
 )
 
 type labelOptions struct {
@@ -20,7 +21,7 @@ func setLabelsCmd(cmd *cmdutils.Cmd) {
 	cfg := api.NewClusterConfig()
 	cmd.ClusterConfig = cfg
 
-	cmd.SetDescription("labels", "Create or overwrite labels", "")
+	cmd.SetDescription("labels", "Create or overwrite labels for managed nodegroups", "")
 
 	var options labelOptions
 	cmd.CobraCommand.RunE = func(_ *cobra.Command, args []string) error {
@@ -47,18 +48,28 @@ func setLabels(cmd *cmdutils.Cmd, options labelOptions) error {
 	if cfg.Metadata.Name == "" {
 		return cmdutils.ErrMustBeSet(cmdutils.ClusterNameFlag(cmd))
 	}
+	if options.nodeGroupName == "" {
+		return cmdutils.ErrMustBeSet("--nodegroup")
+	}
 
 	if cmd.NameArg != "" {
 		return cmdutils.ErrUnsupportedNameArg()
 	}
 
-	ctl := eks.New(&cmd.ProviderConfig, cmd.ClusterConfig)
-
-	if err := ctl.CheckAuth(); err != nil {
+	ctl, err := cmd.NewCtl()
+	if err != nil {
 		return err
 	}
 
-	stackCollection := manager.NewStackCollection(ctl.Provider, cfg)
-	managedService := managed.NewService(ctl.Provider, stackCollection, cfg.Metadata.Name)
-	return managedService.UpdateLabels(options.nodeGroupName, options.labels, nil)
+	cmdutils.LogRegionAndVersionInfo(cmd.ClusterConfig.Metadata)
+	logger.Info("setting label(s) on nodegroup %s in cluster %s", options.nodeGroupName, cmd.ClusterConfig.Metadata)
+
+	service := managed.NewService(ctl.Provider.EKS(), ctl.Provider.SSM(), ctl.Provider.EC2(), manager.NewStackCollection(ctl.Provider, cfg), cfg.Metadata.Name)
+	manager := label.New(cfg.Metadata.Name, service, ctl.Provider.EKS())
+	if err := manager.Set(options.nodeGroupName, options.labels); err != nil {
+		return err
+	}
+
+	logger.Info("done")
+	return nil
 }

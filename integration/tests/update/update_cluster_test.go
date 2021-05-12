@@ -3,6 +3,7 @@
 package update
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,6 +15,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 	. "github.com/weaveworks/eksctl/integration/matchers"
 	. "github.com/weaveworks/eksctl/integration/runner"
 	"github.com/weaveworks/eksctl/integration/tests"
@@ -23,10 +27,6 @@ import (
 	kubewrapper "github.com/weaveworks/eksctl/pkg/kubernetes"
 	"github.com/weaveworks/eksctl/pkg/testutils"
 	"github.com/weaveworks/eksctl/pkg/utils/file"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 const (
@@ -62,6 +62,38 @@ var _ = Describe("(Integration) Update addons", func() {
 			params.KubeconfigPath = f.Name()
 			params.KubeconfigTemp = true
 		}
+
+		if params.SkipCreate {
+			fmt.Fprintf(GinkgoWriter, "will use existing cluster %s", defaultCluster)
+			if !file.Exists(params.KubeconfigPath) {
+				// Generate the Kubernetes configuration that eksctl create
+				// would have generated otherwise:
+				cmd := params.EksctlUtilsCmd.WithArgs(
+					"write-kubeconfig",
+					"--verbose", "4",
+					"--cluster", defaultCluster,
+					"--kubeconfig", params.KubeconfigPath,
+				)
+				Expect(cmd).To(RunSuccessfully())
+			}
+			return
+		}
+
+		fmt.Fprintf(GinkgoWriter, "Using kubeconfig: %s\n", params.KubeconfigPath)
+
+		cmd := params.EksctlCreateCmd.WithArgs(
+			"cluster",
+			"--verbose", "4",
+			"--name", defaultCluster,
+			"--tags", "alpha.eksctl.io/description=eksctl integration test",
+			"--nodegroup-name", initNG,
+			"--node-labels", "ng-name="+initNG,
+			"--nodes", "1",
+			"--node-type", "t3.large",
+			"--version", "1.15",
+			"--kubeconfig", params.KubeconfigPath,
+		)
+		Expect(cmd).To(RunSuccessfully())
 	})
 
 	AfterSuite(func() {
@@ -74,41 +106,7 @@ var _ = Describe("(Integration) Update addons", func() {
 	})
 
 	// Chose 1.15 because the upgrade to 1.16 takes less time than upgrading to 1.17
-	When("creating a cluster with version 1.15", func() {
-		It("should not return an error", func() {
-			if params.SkipCreate {
-				fmt.Fprintf(GinkgoWriter, "will use existing cluster %s", defaultCluster)
-				if !file.Exists(params.KubeconfigPath) {
-					// Generate the Kubernetes configuration that eksctl create
-					// would have generated otherwise:
-					cmd := params.EksctlUtilsCmd.WithArgs(
-						"write-kubeconfig",
-						"--verbose", "4",
-						"--cluster", defaultCluster,
-						"--kubeconfig", params.KubeconfigPath,
-					)
-					Expect(cmd).To(RunSuccessfully())
-				}
-				return
-			}
-
-			fmt.Fprintf(GinkgoWriter, "Using kubeconfig: %s\n", params.KubeconfigPath)
-
-			cmd := params.EksctlCreateCmd.WithArgs(
-				"cluster",
-				"--verbose", "4",
-				"--name", defaultCluster,
-				"--tags", "alpha.eksctl.io/description=eksctl integration test",
-				"--nodegroup-name", initNG,
-				"--node-labels", "ng-name="+initNG,
-				"--nodes", "1",
-				"--node-type", "t3.large",
-				"--version", "1.15",
-				"--kubeconfig", params.KubeconfigPath,
-			)
-			Expect(cmd).To(RunSuccessfully())
-		})
-
+	Context("cluster with version 1.15", func() {
 		It("should have created an EKS cluster and two CloudFormation stacks", func() {
 			awsSession := NewSession(params.Region)
 
@@ -154,15 +152,20 @@ var _ = Describe("(Integration) Update addons", func() {
 
 			clientSet := getClientSet()
 			Eventually(func() string {
-				daemonSet, err := clientSet.AppsV1().DaemonSets(metav1.NamespaceSystem).Get("kube-proxy", metav1.GetOptions{})
+				daemonSet, err := clientSet.AppsV1().DaemonSets(metav1.NamespaceSystem).Get(context.TODO(), "kube-proxy", metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
 				kubeProxyVersion, err := addons.ImageTag(daemonSet.Spec.Template.Spec.Containers[0].Image)
 				Expect(err).ToNot(HaveOccurred())
 				return kubeProxyVersion
-			}, k8sUpdatePollTimeout, k8sUpdatePollInterval).Should(Equal("v1.16.13-eksbuild.1"))
+			}, k8sUpdatePollTimeout, k8sUpdatePollInterval).Should(Equal("v1.16.15-eksbuild.1"))
 		})
 
 		It("should upgrade aws-node", func() {
+			rawClient := getRawClient()
+			preUpdateAWSNode, err := rawClient.ClientSet().AppsV1().DaemonSets(metav1.NamespaceSystem).Get(context.TODO(), "aws-node", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			preUpdateAWSNodeVersion, err := addons.ImageTag(preUpdateAWSNode.Spec.Template.Spec.Containers[0].Image)
+			Expect(err).ToNot(HaveOccurred())
 			cmd := params.EksctlUtilsCmd.WithArgs(
 				"update-aws-node",
 				"--cluster", params.ClusterName,
@@ -171,14 +174,13 @@ var _ = Describe("(Integration) Update addons", func() {
 			)
 			Expect(cmd).To(RunSuccessfully())
 
-			rawClient := getRawClient()
 			Eventually(func() string {
-				clusterDaemonSet, err := rawClient.ClientSet().AppsV1().DaemonSets(metav1.NamespaceSystem).Get("aws-node", metav1.GetOptions{})
+				awsNode, err := rawClient.ClientSet().AppsV1().DaemonSets(metav1.NamespaceSystem).Get(context.TODO(), "aws-node", metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				awsNodeVersion, err := addons.ImageTag(clusterDaemonSet.Spec.Template.Spec.Containers[0].Image)
+				awsNodeVersion, err := addons.ImageTag(awsNode.Spec.Template.Spec.Containers[0].Image)
 				Expect(err).ToNot(HaveOccurred())
 				return awsNodeVersion
-			}, k8sUpdatePollTimeout, k8sUpdatePollInterval).Should(Equal("v1.7.5"))
+			}, k8sUpdatePollTimeout, k8sUpdatePollInterval).ShouldNot(Equal(preUpdateAWSNodeVersion))
 		})
 
 		It("should upgrade coredns", func() {
@@ -192,7 +194,7 @@ var _ = Describe("(Integration) Update addons", func() {
 
 			rawClient := getRawClient()
 			Eventually(func() string {
-				coreDNSDeployment, err := rawClient.ClientSet().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+				coreDNSDeployment, err := rawClient.ClientSet().AppsV1().Deployments(metav1.NamespaceSystem).Get(context.TODO(), "coredns", metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
 				coreDNSVersion, err := addons.ImageTag(coreDNSDeployment.Spec.Template.Spec.Containers[0].Image)
 				Expect(err).ToNot(HaveOccurred())
@@ -210,8 +212,10 @@ func getRawClient() *kubewrapper.RawClient {
 			Region: params.Region,
 		},
 	}
-	ctl := eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
-	err := ctl.RefreshClusterStatus(cfg)
+	ctl, err := eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = ctl.RefreshClusterStatus(cfg)
 	Expect(err).ShouldNot(HaveOccurred())
 	rawClient, err := ctl.NewRawClient(cfg)
 	Expect(err).ToNot(HaveOccurred())
@@ -225,8 +229,10 @@ func getClientSet() *kubernetes.Clientset {
 			Region: params.Region,
 		},
 	}
-	ctl := eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
-	err := ctl.RefreshClusterStatus(cfg)
+	ctl, err := eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = ctl.RefreshClusterStatus(cfg)
 	Expect(err).ShouldNot(HaveOccurred())
 	clientSet, err := ctl.NewStdClientSet(cfg)
 	Expect(err).ToNot(HaveOccurred())

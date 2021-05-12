@@ -1,6 +1,7 @@
 package definition
 
 import (
+	"go/parser"
 	"regexp"
 	"strings"
 
@@ -13,7 +14,10 @@ var (
 	regexpRequired      = regexp.MustCompile("(?m)^Required$")
 	regexpPlusRequired  = regexp.MustCompile(`(?m)^\+required$`)
 	regexpExample       = regexp.MustCompile("(.*)For example: `(.*)`")
-	typeOverridePattern = regexp.MustCompile("(.*)Schema type is `([a-zA-Z]+)`")
+	typeOverridePattern = regexp.MustCompile("(.*)Schema type is `(.*)`")
+	oneOfEntry          = "`([^`]+)`,?[ \t]*"
+	oneOfEntryPattern   = regexp.MustCompile(oneOfEntry)
+	typeOneOfPattern    = regexp.MustCompile("(.*)Schema type is one of ((?:" + oneOfEntry + ")*)")
 	pTags               = regexp.MustCompile("(<p>)|(</p>)")
 )
 
@@ -73,7 +77,29 @@ func (dg *Generator) handleComment(rawName, comment string, def *Definition) (Me
 	if m := typeOverridePattern.FindStringSubmatch(description); m != nil {
 		description = strings.TrimSpace(m[1])
 		noDerive = true
-		def.Type = m[2]
+		expr, err := parser.ParseExpr(m[2])
+		if err != nil {
+			return Meta{}, errors.Wrapf(err, "couldn't parse type override %v", m[2])
+		}
+		overrideDef, _ := dg.newPropertyRef("", expr, "", false)
+		*def = *overrideDef
+	} else if m := typeOneOfPattern.FindStringSubmatch(description); m != nil {
+		description = strings.TrimSpace(m[1])
+		n := oneOfEntryPattern.FindAllStringSubmatch(m[2], -1)
+		if n == nil {
+			panic("error matching oneOf comment with regex")
+		}
+		defs := []*Definition{}
+		for _, t := range n {
+			schemaRef := t[1]
+			expr, err := parser.ParseExpr(schemaRef)
+			if err != nil {
+				return Meta{}, errors.Wrapf(err, "couldn't parse `oneOf` type %v", schemaRef)
+			}
+			def, _ := dg.newPropertyRef("", expr, "", false)
+			defs = append(defs, def)
+		}
+		def.OneOf = defs
 	}
 
 	// Extract example

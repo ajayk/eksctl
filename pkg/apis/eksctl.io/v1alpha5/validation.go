@@ -8,9 +8,21 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/pkg/errors"
+	"github.com/weaveworks/eksctl/pkg/utils/taints"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
+)
+
+// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-launchtemplate-blockdevicemapping-ebs.html
+const (
+	MinThroughput = DefaultNodeVolumeThroughput
+	MaxThroughput = 1000
+	MinIO1Iops    = DefaultNodeVolumeIO1IOPS
+	MaxIO1Iops    = 64000
+	MinGP3Iops    = DefaultNodeVolumeGP3IOPS
+	MaxGP3Iops    = 16000
 )
 
 var (
@@ -38,6 +50,10 @@ func (s nameSet) checkUnique(path, name string) (bool, error) {
 	return true, nil
 }
 
+func setNonEmpty(field string) error {
+	return fmt.Errorf("%s must be set and non-empty", field)
+}
+
 // ValidateClusterConfig checks compatible fields of a given ClusterConfig
 func ValidateClusterConfig(cfg *ClusterConfig) error {
 	if IsDisabled(cfg.IAM.WithOIDC) && len(cfg.IAM.ServiceAccounts) > 0 {
@@ -53,9 +69,13 @@ func ValidateClusterConfig(cfg *ClusterConfig) error {
 		if ok, err := saNames.checkUnique("<namespace>/<name> of "+path, sa.NameString()); !ok {
 			return err
 		}
-		if len(sa.AttachPolicyARNs) == 0 && sa.AttachPolicy == nil {
-			return fmt.Errorf("%s.attachPolicyARNs or %s.attachPolicy must be set", path, path)
+		if !sa.WellKnownPolicies.HasPolicy() && len(sa.AttachPolicyARNs) == 0 && sa.AttachPolicy == nil && sa.AttachRoleARN == "" {
+			return fmt.Errorf("%[1]s.wellKnownPolicies, %[1]s.attachPolicyARNs,%[1]s.attachRoleARN  or %[1]s.attachPolicy must be set", path)
 		}
+	}
+
+	if err := cfg.validateKubernetesNetworkConfig(); err != nil {
+		return err
 	}
 
 	// names must be unique across both managed and unmanaged nodegroups
@@ -71,6 +91,10 @@ func ValidateClusterConfig(cfg *ClusterConfig) error {
 			return fmt.Errorf("%s.privateNetworking must be enabled for a fully-private cluster", path)
 		}
 		return nil
+	}
+
+	if err := validateIdentityProviders(cfg.IdentityProviders); err != nil {
+		return err
 	}
 
 	for i, ng := range cfg.NodeGroups {
@@ -109,8 +133,13 @@ func ValidateClusterConfig(cfg *ClusterConfig) error {
 		cfg.VPC.PublicAccessCIDRs = cidrs
 	}
 
-	if cfg.SecretsEncryption != nil && cfg.SecretsEncryption.KeyARN == nil {
+	if cfg.SecretsEncryption != nil && cfg.SecretsEncryption.KeyARN == "" {
 		return errors.New("field secretsEncryption.keyARN is required for enabling secrets encryption")
+	}
+
+	// manageSharedNodeSecurityGroupRules cannot be disabled if using eksctl managed security groups
+	if cfg.VPC != nil && cfg.VPC.SharedNodeSecurityGroup == "" && IsDisabled(cfg.VPC.ManageSharedNodeSecurityGroupRules) {
+		return errors.New("vpc.manageSharedNodeSecurityGroupRules must be enabled when using ekstcl-managed security groups")
 	}
 
 	return nil
@@ -122,7 +151,7 @@ func (c *ClusterConfig) ValidateClusterEndpointConfig() error {
 		return ErrClusterEndpointNoAccess
 	}
 	endpts := c.VPC.ClusterEndpoints
-	if NoAccess(endpts) {
+	if noAccess(endpts) {
 		return ErrClusterEndpointNoAccess
 	}
 	return nil
@@ -149,8 +178,8 @@ func (c *ClusterConfig) ValidatePrivateCluster() error {
 	return nil
 }
 
-// ValidateKubernetesNetworkConfig validates the network config
-func (c *ClusterConfig) ValidateKubernetesNetworkConfig() error {
+// validateKubernetesNetworkConfig validates the network config
+func (c *ClusterConfig) validateKubernetesNetworkConfig() error {
 	if c.KubernetesNetworkConfig != nil {
 		serviceIP := c.KubernetesNetworkConfig.ServiceIPv4CIDR
 		if _, _, err := net.ParseCIDR(serviceIP); serviceIP != "" && err != nil {
@@ -161,7 +190,7 @@ func (c *ClusterConfig) ValidateKubernetesNetworkConfig() error {
 }
 
 // NoAccess returns true if neither public are private cluster endpoint access is enabled and false otherwise
-func NoAccess(ces *ClusterEndpoints) bool {
+func noAccess(ces *ClusterEndpoints) bool {
 	return !(*ces.PublicAccess || *ces.PrivateAccess)
 }
 
@@ -175,9 +204,6 @@ func validateNodeGroupBase(ng *NodeGroupBase, path string) error {
 		errCantSet := func(field string) error {
 			return fmt.Errorf("%s.%s cannot be set without %s.volumeSize", path, field, path)
 		}
-		if IsSetAndNonEmptyString(ng.VolumeType) {
-			return errCantSet("volumeType")
-		}
 		if IsSetAndNonEmptyString(ng.VolumeName) {
 			return errCantSet("volumeName")
 		}
@@ -189,12 +215,8 @@ func validateNodeGroupBase(ng *NodeGroupBase, path string) error {
 		}
 	}
 
-	if ng.VolumeType != nil && *ng.VolumeType == NodeVolumeTypeIO1 {
-		if ng.VolumeIOPS == nil {
-			return fmt.Errorf("%s.volumeIOPS is required for %s volume type", path, NodeVolumeTypeIO1)
-		}
-	} else if ng.VolumeIOPS != nil {
-		return fmt.Errorf("%s.volumeIOPS is only supported for %s volume type", path, NodeVolumeTypeIO1)
+	if err := validateVolumeOpts(ng, path); err != nil {
+		return err
 	}
 
 	if ng.VolumeEncrypted == nil || IsDisabled(ng.VolumeEncrypted) {
@@ -215,12 +237,81 @@ func validateNodeGroupBase(ng *NodeGroupBase, path string) error {
 		}
 	}
 
+	if len(ng.AvailabilityZones) > 0 && len(ng.Subnets) > 0 {
+		return fmt.Errorf("only one of %[1]s.subnets or %[1]s.availabilityZones should be set", path)
+	}
+
 	if ng.Placement != nil {
 		if ng.Placement.GroupName == "" {
 			return fmt.Errorf("%s.placement.groupName must be set and non-empty", path)
 		}
 	}
 
+	if IsEnabled(ng.EFAEnabled) {
+		if len(ng.AvailabilityZones) > 1 || len(ng.Subnets) > 1 {
+			return fmt.Errorf("%s.efaEnabled nodegroups must have only one subnet or one availability zone", path)
+		}
+	}
+
+	if ng.AMIFamily != "" && !isSupportedAMIFamily(ng.AMIFamily) {
+		return fmt.Errorf("AMI Family %s is not supported - use one of: %s", ng.AMIFamily, strings.Join(supportedAMIFamilies(), ", "))
+	}
+
+	return nil
+}
+
+func validateVolumeOpts(ng *NodeGroupBase, path string) error {
+	if ng.VolumeType != nil {
+		if ng.VolumeIOPS != nil && !(*ng.VolumeType == NodeVolumeTypeIO1 || *ng.VolumeType == NodeVolumeTypeGP3) {
+			return fmt.Errorf("%s.volumeIOPS is only supported for %s and %s volume types", path, NodeVolumeTypeIO1, NodeVolumeTypeGP3)
+		}
+
+		if *ng.VolumeType == NodeVolumeTypeIO1 {
+			if ng.VolumeIOPS != nil && !(*ng.VolumeIOPS >= MinIO1Iops && *ng.VolumeIOPS <= MaxIO1Iops) {
+				return fmt.Errorf("value for %s.volumeIOPS must be within range %d-%d", path, MinIO1Iops, MaxIO1Iops)
+			}
+		}
+
+		if ng.VolumeThroughput != nil && *ng.VolumeType != NodeVolumeTypeGP3 {
+			return fmt.Errorf("%s.volumeThroughput is only supported for %s volume type", path, NodeVolumeTypeGP3)
+		}
+	}
+
+	if ng.VolumeType == nil || *ng.VolumeType == NodeVolumeTypeGP3 {
+		if ng.VolumeIOPS != nil && !(*ng.VolumeIOPS >= MinGP3Iops && *ng.VolumeIOPS <= MaxGP3Iops) {
+			return fmt.Errorf("value for %s.volumeIOPS must be within range %d-%d", path, MinGP3Iops, MaxGP3Iops)
+		}
+
+		if ng.VolumeThroughput != nil && !(*ng.VolumeThroughput >= MinThroughput && *ng.VolumeThroughput <= MaxThroughput) {
+			return fmt.Errorf("value for %s.volumeThroughput must be within range %d-%d", path, MinThroughput, MaxThroughput)
+		}
+	}
+
+	return nil
+}
+
+func validateIdentityProvider(idP IdentityProvider) error {
+	switch idP := (idP.Inner).(type) {
+	case *OIDCIdentityProvider:
+		if idP.Name == "" {
+			return setNonEmpty("name")
+		}
+		if idP.ClientID == "" {
+			return setNonEmpty("clientID")
+		}
+		if idP.IssuerURL == "" {
+			return setNonEmpty("issuerURL")
+		}
+	}
+	return nil
+}
+
+func validateIdentityProviders(idPs []IdentityProvider) error {
+	for k, idP := range idPs {
+		if err := validateIdentityProvider(idP); err != nil {
+			return errors.Wrapf(err, "identityProviders[%d] is invalid", k)
+		}
+	}
 	return nil
 }
 
@@ -248,16 +339,13 @@ func ValidateNodeGroup(i int, ng *NodeGroup) error {
 		}
 	}
 
-	if err := ValidateNodeGroupLabels(ng.Labels); err != nil {
+	if err := validateNodeGroupLabels(ng.Labels); err != nil {
 		return err
 	}
 
 	if ng.SSH != nil {
 		if err := validateNodeGroupSSH(ng.SSH); err != nil {
 			return err
-		}
-		if len(ng.SSH.SourceSecurityGroupIDs) > 0 {
-			return fmt.Errorf("%s.sourceSecurityGroupIds is not supported for unmanaged nodegroups", path)
 		}
 	}
 
@@ -308,10 +396,10 @@ func ValidateNodeGroup(i int, ng *NodeGroup) error {
 	return nil
 }
 
-// ValidateNodeGroupLabels uses proper Kubernetes label validation,
+// validateNodeGroupLabels uses proper Kubernetes label validation,
 // it's designed to make sure users don't pass weird labels to the
 // nodes, which would prevent kubelets to startup properly
-func ValidateNodeGroupLabels(labels map[string]string) error {
+func validateNodeGroupLabels(labels map[string]string) error {
 	// compact version based on:
 	// - https://github.com/kubernetes/kubernetes/blob/v1.13.2/cmd/kubelet/app/options/options.go#L257-L267
 	// - https://github.com/kubernetes/kubernetes/blob/v1.13.2/pkg/kubelet/apis/well_known_labels.go
@@ -388,7 +476,7 @@ func validateNodeGroupIAMWithAddonPolicies(
 	if IsEnabled(policies.EFS) {
 		return fmtFieldConflictErr(prefix + "efs")
 	}
-	if IsEnabled(policies.ALBIngress) {
+	if IsEnabled(policies.AWSLoadBalancerController) {
 		return fmtFieldConflictErr(prefix + "albIngress")
 	}
 	if IsEnabled(policies.XRay) {
@@ -475,12 +563,28 @@ func ValidateManagedNodeGroup(ng *ManagedNodeGroup, index int) error {
 	if ng.DesiredCapacity == nil {
 		ng.DesiredCapacity = ng.MinSize
 	}
-	if ng.VolumeType == nil {
-		ng.VolumeType = &DefaultNodeVolumeType
-	}
 
 	if IsEnabled(ng.SecurityGroups.WithLocal) || IsEnabled(ng.SecurityGroups.WithShared) {
 		return errors.Errorf("securityGroups.withLocal and securityGroups.withShared are not supported for managed nodegroups (%s.securityGroups)", path)
+	}
+
+	if ng.InstanceType != "" {
+		if len(ng.InstanceTypes) > 0 {
+			return errors.Errorf("only one of instanceType or instanceTypes can be specified (%s)", path)
+		}
+		if !ng.InstanceSelector.IsZero() {
+			return errors.Errorf("cannot set instanceType when instanceSelector is specified (%s)", path)
+		}
+	}
+
+	for _, t := range ng.Taints {
+		if err := taints.Validate(corev1.Taint{
+			Key:    t.Key,
+			Value:  t.Value,
+			Effect: t.Effect,
+		}); err != nil {
+			return err
+		}
 	}
 
 	switch {
@@ -500,13 +604,13 @@ func ValidateManagedNodeGroup(ng *ManagedNodeGroup, index int) error {
 			}
 		}
 
-		if ng.InstanceType != "" || ng.AMI != "" || IsEnabled(ng.SSH.Allow) || len(ng.SSH.SourceSecurityGroupIDs) > 0 ||
+		if ng.InstanceType != "" || ng.AMI != "" || IsEnabled(ng.SSH.Allow) || IsEnabled(ng.SSH.EnableSSM) || len(ng.SSH.SourceSecurityGroupIDs) > 0 ||
 			ng.VolumeSize != nil || len(ng.PreBootstrapCommands) > 0 || ng.OverrideBootstrapCommand != nil ||
 			len(ng.SecurityGroups.AttachIDs) > 0 || ng.InstanceName != "" || ng.InstancePrefix != "" || ng.MaxPodsPerNode != 0 ||
 			IsEnabled(ng.DisableIMDSv1) || IsEnabled(ng.DisablePodIMDS) || ng.Placement != nil {
 
 			incompatibleFields := []string{
-				"instanceType", "ami", "ssh.allow", "ssh.sourceSecurityGroupIds", "securityGroups",
+				"instanceType", "ami", "ssh.allow", "ssh.enableSSM", "ssh.sourceSecurityGroupIds", "securityGroups",
 				"volumeSize", "instanceName", "instancePrefix", "maxPodsPerNode", "disableIMDSv1",
 				"disablePodIMDS", "preBootstrapCommands", "overrideBootstrapCommand", "placement",
 			}
@@ -520,8 +624,17 @@ func ValidateManagedNodeGroup(ng *ManagedNodeGroup, index int) error {
 		if ng.OverrideBootstrapCommand == nil {
 			return errors.Errorf("%s.overrideBootstrapCommand is required when using a custom AMI (%s.ami)", path, path)
 		}
+		notSupportedWithCustomAMIErr := func(field string) error {
+			return errors.Errorf("%s.%s is not supported when using a custom AMI (%s.ami)", path, field, path)
+		}
 		if ng.MaxPodsPerNode != 0 {
-			return errors.Errorf("%s.maxPodsPerNode is not supported when using a custom AMI (%s.ami)", path, path)
+			return notSupportedWithCustomAMIErr("maxPodsPerNode")
+		}
+		if ng.SSH != nil && IsEnabled(ng.SSH.EnableSSM) {
+			return notSupportedWithCustomAMIErr("enableSSM")
+		}
+		if ng.ReleaseVersion != "" {
+			return notSupportedWithCustomAMIErr("releaseVersion")
 		}
 
 	case ng.OverrideBootstrapCommand != nil:
@@ -532,26 +645,39 @@ func ValidateManagedNodeGroup(ng *ManagedNodeGroup, index int) error {
 }
 
 func validateInstancesDistribution(ng *NodeGroup) error {
-	if ng.InstancesDistribution == nil {
+	hasInstanceSelector := ng.InstanceSelector != nil && !ng.InstanceSelector.IsZero()
+	if ng.InstancesDistribution == nil && !hasInstanceSelector {
 		return nil
 	}
 
 	if ng.InstanceType != "" && ng.InstanceType != "mixed" {
-		return fmt.Errorf(`instanceType should be "mixed" or unset when using the mixed instances feature`)
+		makeError := func(featureStr string) error {
+			return errors.Errorf(`instanceType should be "mixed" or unset when using the %s feature`, featureStr)
+		}
+		if ng.InstancesDistribution != nil {
+			return makeError("instances distribution")
+		}
+		return makeError("instance selector")
+	}
+
+	if ng.InstancesDistribution == nil {
+		return nil
 	}
 
 	distribution := ng.InstancesDistribution
-	if distribution.InstanceTypes == nil || len(distribution.InstanceTypes) == 0 {
+	if len(distribution.InstanceTypes) == 0 && !hasInstanceSelector {
 		return fmt.Errorf("at least two instance types have to be specified for mixed nodegroups")
 	}
 
-	allInstanceTypes := make(map[string]bool)
-	for _, instanceType := range distribution.InstanceTypes {
-		allInstanceTypes[instanceType] = true
-	}
+	if !hasInstanceSelector {
+		uniqueInstanceTypes := make(map[string]struct{})
+		for _, instanceType := range distribution.InstanceTypes {
+			uniqueInstanceTypes[instanceType] = struct{}{}
+		}
 
-	if len(allInstanceTypes) < 1 || len(allInstanceTypes) > 20 {
-		return fmt.Errorf("mixed nodegroups should have between 1 and 20 different instance types")
+		if len(uniqueInstanceTypes) > 20 {
+			return fmt.Errorf("mixed nodegroups should have between 1 and 20 different instance types")
+		}
 	}
 
 	if distribution.OnDemandBaseCapacity != nil && *distribution.OnDemandBaseCapacity < 0 {
@@ -568,6 +694,10 @@ func validateInstancesDistribution(ng *NodeGroup) error {
 
 	if distribution.SpotInstancePools != nil && distribution.SpotAllocationStrategy != nil && *distribution.SpotAllocationStrategy == SpotAllocationStrategyCapacityOptimized {
 		return fmt.Errorf("spotInstancePools cannot be specified when also specifying spotAllocationStrategy: %s", SpotAllocationStrategyCapacityOptimized)
+	}
+
+	if distribution.SpotInstancePools != nil && distribution.SpotAllocationStrategy != nil && (*distribution.SpotAllocationStrategy == SpotAllocationStrategyCapacityOptimized || *distribution.SpotAllocationStrategy == SpotAllocationStrategyCapacityOptimizedPrioritized) {
+		return fmt.Errorf("spotInstancePools cannot be specified when also specifying spotAllocationStrategy: %s", SpotAllocationStrategyCapacityOptimizedPrioritized)
 	}
 
 	if distribution.SpotAllocationStrategy != nil {
@@ -637,7 +767,7 @@ func validateNodeGroupSSH(SSH *NodeGroupSSH) error {
 		SSH.PublicKeyName)
 
 	if numSSHFlagsEnabled > 1 {
-		return errors.New("only one SSH public key can be specified per node-group")
+		return errors.New("only one of publicKeyName, publicKeyPath or publicKey can be specified for SSH per node-group")
 	}
 	return nil
 }
@@ -675,12 +805,20 @@ func validateNodeGroupKubeletExtraConfig(kubeletConfig *InlineDocument) error {
 	return nil
 }
 
+func isSupportedAMIFamily(imageFamily string) bool {
+	for _, image := range supportedAMIFamilies() {
+		if imageFamily == image {
+			return true
+		}
+	}
+	return false
+}
+
 // IsWindowsImage reports whether the AMI family is for Windows
 func IsWindowsImage(imageFamily string) bool {
 	switch imageFamily {
 	case NodeImageFamilyWindowsServer2019CoreContainer,
 		NodeImageFamilyWindowsServer2019FullContainer,
-		NodeImageFamilyWindowsServer1909CoreContainer,
 		NodeImageFamilyWindowsServer2004CoreContainer:
 		return true
 

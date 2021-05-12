@@ -26,6 +26,9 @@ privateCluster:
 !!!note
     VPC endpoints are charged by the hour and based on usage. More details about pricing can be found at
     [AWS PrivateLink pricing](https://aws.amazon.com/privatelink/pricing/)
+    
+!!!note
+    Fully-private clusters are not supported in `eu-south-1`.
 
 ## Configuring private access to additional AWS services
 
@@ -52,7 +55,7 @@ privateCluster:
   # For Cluster Autoscaler
   - "autoscaling"
   # CloudWatch logging
-  - "log"
+  - "logs"
 ```
 
 The endpoints supported in `additionalEndpointServices` are `autoscaling`, `cloudformation` and `logs`.
@@ -148,6 +151,22 @@ This is required because eksctl needs access to the Kubernetes API server to all
 to support GitOps and Fargate. After these operations have completed, eksctl switches the cluster endpoint access to private-only.
 This additional update does mean that creation of a fully-private cluster will take longer than for a standard cluster.
 In the future, eksctl may switch to a VPC-enabled Lambda function to perform these API operations.
+
+
+## Outbound access via HTTP proxy servers
+eksctl is able to talk to the AWS APIs via a configured HTTP(S) proxy server,
+however you will need to ensure you set your proxy exclusion list correctly.
+
+Generally, you will need to ensure that requests for the VPC endpoint for your
+cluster are not routed via your proxies by setting an appropriate `no_proxy`
+environment variable including the value `.eks.amazonaws.com`.
+
+If your proxy server performs "SSL interception" and you are using IAM Roles
+for Service Accounts (IRSA), you will need to ensure that you explicitly bypass
+SSL Man-in-the-Middle for the domain `oidc.<region>.amazonaws.com`. Failure to
+do so will result in eksctl obtaining the incorrect root certificate thumbprint
+for the OIDC provider, and the AWS VPC CNI plugin will fail to start due to
+being unable to obtain IAM credentials, rendering your cluster inoperative.
 
 
 ## Further information

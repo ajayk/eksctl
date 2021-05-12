@@ -2,7 +2,15 @@ package create
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
+
+	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
+	"github.com/weaveworks/eksctl/pkg/kops"
+	"github.com/weaveworks/eksctl/pkg/utils"
+
+	"github.com/weaveworks/eksctl/pkg/actions/addon"
 
 	"github.com/kris-nova/logger"
 	"github.com/pkg/errors"
@@ -10,18 +18,17 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/weaveworks/eksctl/pkg/ctl/cmdutils/filter"
-
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/authconfigmap"
 	"github.com/weaveworks/eksctl/pkg/ctl/cmdutils"
+	"github.com/weaveworks/eksctl/pkg/ctl/cmdutils/filter"
 	"github.com/weaveworks/eksctl/pkg/eks"
 	"github.com/weaveworks/eksctl/pkg/gitops"
-	"github.com/weaveworks/eksctl/pkg/kops"
 	"github.com/weaveworks/eksctl/pkg/printers"
 	"github.com/weaveworks/eksctl/pkg/utils/kubeconfig"
 	"github.com/weaveworks/eksctl/pkg/utils/kubectl"
 	"github.com/weaveworks/eksctl/pkg/utils/names"
+	"github.com/weaveworks/eksctl/pkg/utils/tasks"
 	"github.com/weaveworks/eksctl/pkg/vpc"
 )
 
@@ -62,19 +69,18 @@ func createClusterCmdWithRunFunc(cmd *cmdutils.Cmd, runFunc func(cmd *cmdutils.C
 		cmdutils.AddConfigFileFlag(fs, &cmd.ClusterConfigFile)
 		cmdutils.AddTimeoutFlag(fs, &cmd.ProviderConfig.WaitTimeout)
 		fs.BoolVarP(&params.InstallWindowsVPCController, "install-vpc-controllers", "", false, "Install VPC controller that's required for Windows workloads")
-		fs.BoolVarP(&params.Managed, "managed", "", false, "Create EKS-managed nodegroup")
 		fs.BoolVarP(&params.Fargate, "fargate", "", false, "Create a Fargate profile scheduling pods in the default and kube-system namespaces onto Fargate")
+		fs.BoolVarP(&params.DryRun, "dry-run", "", false, "Dry-run mode that skips cluster creation and outputs a ClusterConfig")
 	})
 
 	cmd.FlagSetGroup.InFlagSet("Initial nodegroup", func(fs *pflag.FlagSet) {
 		fs.StringVar(&ng.Name, "nodegroup-name", "", fmt.Sprintf("name of the nodegroup (generated if unspecified, e.g. %q)", exampleNodeGroupName))
 		fs.BoolVar(&params.WithoutNodeGroup, "without-nodegroup", false, "if set, initial nodegroup will not be created")
-		cmdutils.AddCommonCreateNodeGroupFlags(fs, cmd, ng)
+		cmdutils.AddCommonCreateNodeGroupFlags(fs, cmd, ng, &params.CreateManagedNGOptions)
 	})
 
 	cmd.FlagSetGroup.InFlagSet("Cluster and nodegroup add-ons", func(fs *pflag.FlagSet) {
-		fs.BoolVarP(&params.InstallNeuronDevicePlugin, "install-neuron-plugin", "", true, "install Neuron plugin for Inferentia nodes")
-		cmdutils.AddCommonCreateNodeGroupIAMAddonsFlags(fs, ng)
+		cmdutils.AddCommonCreateNodeGroupAddonsFlags(fs, ng, &params.CreateNGOptions)
 	})
 
 	cmd.FlagSetGroup.InFlagSet("VPC networking", func(fs *pflag.FlagSet) {
@@ -86,6 +92,8 @@ func createClusterCmdWithRunFunc(cmd *cmdutils.Cmd, runFunc func(cmd *cmdutils.C
 		fs.StringVar(&params.KopsClusterNameForVPC, "vpc-from-kops-cluster", "", "re-use VPC from a given kops cluster")
 		fs.StringVar(cfg.VPC.NAT.Gateway, "vpc-nat-mode", api.ClusterSingleNAT, "VPC NAT mode, valid options: HighlyAvailable, Single, Disable")
 	})
+
+	cmdutils.AddInstanceSelectorOptions(cmd.FlagSetGroup, ng)
 
 	cmdutils.AddCommonFlagsForAWS(cmd.FlagSetGroup, &cmd.ProviderConfig, true)
 
@@ -105,6 +113,15 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 	if err != nil {
 		return err
 	}
+
+	if params.DryRun {
+		originalWriter := logger.Writer
+		logger.Writer = io.Discard
+		defer func() {
+			logger.Writer = originalWriter
+		}()
+	}
+
 	cmdutils.LogRegionAndVersionInfo(meta)
 
 	if cfg.Metadata.Version == "" || cfg.Metadata.Version == "auto" {
@@ -123,10 +140,6 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 		return err
 	}
 
-	if err := cfg.ValidateKubernetesNetworkConfig(); err != nil {
-		return err
-	}
-
 	if err := cfg.ValidateClusterEndpointConfig(); err != nil {
 		return err
 	}
@@ -136,8 +149,9 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 		logger.Warning(api.ErrClusterEndpointPrivateOnly.Error())
 	}
 
-	if err := ctl.CheckAuth(); err != nil {
-		return err
+	// if using a custom shared node security group, warn that the rules are managed by default
+	if cfg.VPC.SharedNodeSecurityGroup != "" && api.IsEnabled(cfg.VPC.ManageSharedNodeSecurityGroupRules) {
+		logger.Warning("security group rules may be added by eksctl; see vpc.manageSharedNodeSecurityGroupRules to disable this behavior")
 	}
 
 	if params.AutoKubeconfigPath {
@@ -154,7 +168,7 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 		cfg.VPC.CIDR = nil
 		// load subnets from local map created from flags, into the config
 		for topology := range params.Subnets {
-			if err := vpc.ImportSubnetsFromList(ctl.Provider, cfg, topology, *params.Subnets[topology]); err != nil {
+			if err := vpc.ImportSubnetsFromIDList(ctl.Provider.EC2(), cfg, topology, *params.Subnets[topology]); err != nil {
 				return err
 			}
 		}
@@ -173,103 +187,21 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 		eks.LogWindowsCompatibility(kubeNodeGroups, cfg.Metadata)
 	}
 
-	subnetsGiven := cfg.HasAnySubnets() // this will be false when neither flags nor config has any subnets
-
-	createOrImportVPC := func() error {
-
-		subnetInfo := func() string {
-			return fmt.Sprintf("VPC (%s) and subnets (private:%v public:%v)",
-				cfg.VPC.ID, cfg.PrivateSubnetIDs(), cfg.PublicSubnetIDs())
-		}
-
-		customNetworkingNotice := "custom VPC/subnets will be used; if resulting cluster doesn't function as expected, make sure to review the configuration of VPC/subnets"
-
-		canUseForPrivateNodeGroups := func(ng *api.NodeGroup) error {
-			if ng.PrivateNetworking && !cfg.HasSufficientPrivateSubnets() {
-				return errors.New("none or too few private subnets to use with --node-private-networking")
-			}
-			return nil
-		}
-
-		if !subnetsGiven && params.KopsClusterNameForVPC == "" {
-			// default: create dedicated VPC
-			if err := ctl.SetAvailabilityZones(cfg, params.AvailabilityZones); err != nil {
-				return err
-			}
-			if err := vpc.SetSubnets(cfg.VPC, cfg.AvailabilityZones); err != nil {
-				return err
-			}
-			return nil
-		}
-
-		if params.KopsClusterNameForVPC != "" {
-			// import VPC from a given kops cluster
-			if len(params.AvailabilityZones) != 0 {
-				return fmt.Errorf("--vpc-from-kops-cluster and --zones %s", cmdutils.IncompatibleFlags)
-			}
-			if cmd.CobraCommand.Flag("vpc-cidr").Changed {
-				return fmt.Errorf("--vpc-from-kops-cluster and --vpc-cidr %s", cmdutils.IncompatibleFlags)
-			}
-
-			if subnetsGiven {
-				return fmt.Errorf("--vpc-from-kops-cluster and --vpc-private-subnets/--vpc-public-subnets %s", cmdutils.IncompatibleFlags)
-			}
-
-			kw, err := kops.NewWrapper(cmd.ProviderConfig.Region, params.KopsClusterNameForVPC)
-			if err != nil {
-				return err
-			}
-
-			if err := kw.UseVPC(ctl.Provider, cfg); err != nil {
-				return err
-			}
-
-			for _, ng := range cfg.NodeGroups {
-				if err := canUseForPrivateNodeGroups(ng); err != nil {
-					return err
-				}
-			}
-
-			logger.Success("using %s from kops cluster %q", subnetInfo(), params.KopsClusterNameForVPC)
-			logger.Warning(customNetworkingNotice)
-			return nil
-		}
-
-		// use subnets as specified by --vpc-{private,public}-subnets flags
-
-		if len(params.AvailabilityZones) != 0 {
-			return fmt.Errorf("--vpc-private-subnets/--vpc-public-subnets and --zones %s", cmdutils.IncompatibleFlags)
-		}
-		if cmd.CobraCommand.Flag("vpc-cidr").Changed {
-			return fmt.Errorf("--vpc-private-subnets/--vpc-public-subnets and --vpc-cidr %s", cmdutils.IncompatibleFlags)
-		}
-
-		if err := vpc.ImportAllSubnets(ctl.Provider, cfg); err != nil {
-			return err
-		}
-
-		if err := cfg.HasSufficientSubnets(); err != nil {
-			logger.Critical("unable to use given %s", subnetInfo())
-			return err
-		}
-
-		for _, ng := range cfg.NodeGroups {
-			if err := canUseForPrivateNodeGroups(ng); err != nil {
-				return err
-			}
-		}
-
-		logger.Success("using existing %s", subnetInfo())
-		logger.Warning(customNetworkingNotice)
-		return nil
-	}
-
-	if err := createOrImportVPC(); err != nil {
+	if err := createOrImportVPC(cmd, cfg, params, ctl); err != nil {
 		return err
 	}
 
-	nodeGroupService := eks.NewNodeGroupService(cfg, ctl.Provider)
-	if err := nodeGroupService.Normalize(cmdutils.ToNodePools(cfg)); err != nil {
+	nodeGroupService := eks.NewNodeGroupService(ctl.Provider, selector.New(ctl.Provider.Session()))
+	nodePools := cmdutils.ToNodePools(cfg)
+	if err := nodeGroupService.ExpandInstanceSelectorOptions(nodePools, cfg.AvailabilityZones); err != nil {
+		return err
+	}
+
+	if params.DryRun {
+		return cmdutils.PrintDryRunConfig(cfg, os.Stdout)
+	}
+
+	if err := nodeGroupService.Normalize(nodePools, cfg.Metadata); err != nil {
 		return err
 	}
 
@@ -311,13 +243,30 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 			return err
 		}
 		postClusterCreationTasks := ctl.CreateExtraClusterConfigTasks(cfg, params.InstallWindowsVPCController)
-		tasks := stackManager.NewTasksToCreateClusterWithNodeGroups(cfg.NodeGroups, cfg.ManagedNodeGroups, supportsManagedNodes, postClusterCreationTasks)
 
-		logger.Info(tasks.Describe())
-		if errs := tasks.DoAllSync(); len(errs) > 0 {
+		supported, err := utils.IsMinVersion(api.Version1_18, cfg.Metadata.Version)
+		if err != nil {
+			return err
+		}
+
+		var taskTree *tasks.TaskTree
+		if supported {
+			createAddonTasks := addon.CreateAddonTasks(cfg, ctl, true, cmd.ProviderConfig.WaitTimeout)
+			createAddonTasks.IsSubTask = true
+			taskTree = stackManager.NewTasksToCreateClusterWithNodeGroups(cfg.NodeGroups, cfg.ManagedNodeGroups, supportsManagedNodes, postClusterCreationTasks, createAddonTasks)
+		} else {
+			taskTree = stackManager.NewTasksToCreateClusterWithNodeGroups(cfg.NodeGroups, cfg.ManagedNodeGroups, supportsManagedNodes, postClusterCreationTasks)
+		}
+
+		logger.Info(taskTree.Describe())
+		if errs := taskTree.DoAllSync(); len(errs) > 0 {
 			logger.Warning("%d error(s) occurred and cluster hasn't been created properly, you may wish to check CloudFormation console", len(errs))
 			logger.Info("to cleanup resources, run 'eksctl delete cluster --region=%s --name=%s'", meta.Region, meta.Name)
 			for _, err := range errs {
+				ufe := &api.UnsupportedFeatureError{}
+				if errors.As(err, &ufe) {
+					logger.Critical(ufe.Message)
+				}
 				logger.Critical("%s\n", err.Error())
 			}
 			return fmt.Errorf("failed to create cluster %q", meta.Name)
@@ -345,17 +294,7 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 			params.KubeconfigPath = ""
 		}
 
-		// create Kubernetes client
-		clientSet, err := ctl.NewStdClientSet(cfg)
-		if err != nil {
-			return err
-		}
-
-		if err = ctl.WaitForControlPlane(meta, clientSet); err != nil {
-			return err
-		}
-
-		ngTasks := ctl.ClusterTasksForNodeGroups(cfg, params.InstallNeuronDevicePlugin)
+		ngTasks := ctl.ClusterTasksForNodeGroups(cfg, params.InstallNeuronDevicePlugin, params.InstallNvidiaDevicePlugin)
 
 		logger.Info(ngTasks.Describe())
 		if errs := ngTasks.DoAllSync(); len(errs) > 0 {
@@ -368,6 +307,12 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 		}
 		logger.Success("all EKS cluster resources for %q have been created", meta.Name)
 
+		// create Kubernetes client
+		clientSet, err := ctl.NewStdClientSet(cfg)
+		if err != nil {
+			return err
+		}
+
 		for _, ng := range cfg.NodeGroups {
 			// authorise nodes to join
 			if err = authconfigmap.AddNodeGroup(clientSet, ng); err != nil {
@@ -378,8 +323,6 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 			if err = ctl.WaitForNodes(clientSet, ng); err != nil {
 				return err
 			}
-
-			showDevicePluginMessageForNodeGroup(ng, params.InstallNeuronDevicePlugin)
 		}
 
 		for _, ng := range cfg.ManagedNodeGroups {
@@ -388,7 +331,11 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 			}
 		}
 
+		// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
 		if cfg.HasGitopsRepoConfigured() {
+			logger.Warning("git.X configuration is marked for deprecation: Please see https://github.com/weaveworks/eksctl/issues/2963")
+		}
+		if cfg.HasGitopsRepoConfigured() || cfg.HasGitOpsFluxConfigured() {
 			kubernetesClientConfigs, err := ctl.NewClient(cfg)
 			if err != nil {
 				return err
@@ -398,7 +345,7 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 			if err != nil {
 				return errors.Wrap(err, "cannot create Kubernetes client configuration")
 			}
-			err = gitops.Setup(k8sRestConfig, clientSet, cfg, gitops.DefaultPodReadyTimeout)
+			err = gitops.Setup(params.KubeconfigPath, k8sRestConfig, clientSet, cfg, gitops.DefaultPodReadyTimeout)
 			if err != nil {
 				return err
 			}
@@ -432,4 +379,96 @@ func doCreateCluster(cmd *cmdutils.Cmd, ngFilter *filter.NodeGroupFilter, params
 	}
 
 	return nil
+}
+
+func createOrImportVPC(cmd *cmdutils.Cmd, cfg *api.ClusterConfig, params *cmdutils.CreateClusterCmdParams, ctl *eks.ClusterProvider) error {
+	customNetworkingNotice := "custom VPC/subnets will be used; if resulting cluster doesn't function as expected, make sure to review the configuration of VPC/subnets"
+
+	subnetsGiven := cfg.HasAnySubnets() // this will be false when neither flags nor config has any subnets
+	if !subnetsGiven && params.KopsClusterNameForVPC == "" {
+		if err := ctl.SetAvailabilityZones(cfg, params.AvailabilityZones); err != nil {
+			return err
+		}
+
+		// Skip setting subnets
+		// The default subnet config set by SetSubnets will fail validation on a subsequent run of `create cluster`
+		// because those fields indicate usage of pre-existing VPC and subnets
+		// default: create dedicated VPC
+		if params.DryRun {
+			return nil
+		}
+		if err := vpc.SetSubnets(cfg.VPC, cfg.AvailabilityZones); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if params.KopsClusterNameForVPC != "" {
+		// import VPC from a given kops cluster
+		if len(params.AvailabilityZones) != 0 {
+			return fmt.Errorf("--vpc-from-kops-cluster and --zones %s", cmdutils.IncompatibleFlags)
+		}
+		if cmd.CobraCommand.Flag("vpc-cidr").Changed {
+			return fmt.Errorf("--vpc-from-kops-cluster and --vpc-cidr %s", cmdutils.IncompatibleFlags)
+		}
+
+		if subnetsGiven {
+			return fmt.Errorf("--vpc-from-kops-cluster and --vpc-private-subnets/--vpc-public-subnets %s", cmdutils.IncompatibleFlags)
+		}
+
+		kw, err := kops.NewWrapper(cmd.ProviderConfig.Region, params.KopsClusterNameForVPC)
+		if err != nil {
+			return err
+		}
+
+		if params.DryRun {
+			return nil
+		}
+
+		if err := kw.UseVPC(ctl.Provider.EC2(), cfg); err != nil {
+			return err
+		}
+
+		if err := cfg.CanUseForPrivateNodeGroups(); err != nil {
+			return err
+		}
+
+		logger.Success("using %s from kops cluster %q", cfg.SubnetInfo(), params.KopsClusterNameForVPC)
+		logger.Warning(customNetworkingNotice)
+		return nil
+	}
+
+	// use subnets as specified by --vpc-{private,public}-subnets flags
+
+	if len(params.AvailabilityZones) != 0 {
+		return fmt.Errorf("--vpc-private-subnets/--vpc-public-subnets and --zones %s", cmdutils.IncompatibleFlags)
+	}
+	if cmd.CobraCommand.Flag("vpc-cidr").Changed {
+		return fmt.Errorf("--vpc-private-subnets/--vpc-public-subnets and --vpc-cidr %s", cmdutils.IncompatibleFlags)
+	}
+
+	if params.DryRun {
+		return nil
+	}
+
+	if err := vpc.ImportSubnetsFromSpec(ctl.Provider, cfg); err != nil {
+		return err
+	}
+
+	if err := cfg.HasSufficientSubnets(); err != nil {
+		logger.Critical("unable to use given %s", cfg.SubnetInfo())
+		return err
+	}
+
+	if err := cfg.CanUseForPrivateNodeGroups(); err != nil {
+		return err
+	}
+
+	logger.Success("using existing %s", cfg.SubnetInfo())
+	logger.Warning(customNetworkingNotice)
+	return nil
+}
+
+func checkSubnetsGivenAsFlags(params *cmdutils.CreateClusterCmdParams) bool {
+	return len(*params.Subnets[api.SubnetTopologyPrivate])+len(*params.Subnets[api.SubnetTopologyPublic]) != 0
 }

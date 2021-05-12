@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path"
 
 	"github.com/kris-nova/logger"
 
@@ -19,7 +20,7 @@ const (
 	// Shell defines the used shell
 	Shell = "/bin/bash"
 
-	scriptDir = "/var/lib/cloud/scripts/per-instance/"
+	scriptDir = "/var/lib/cloud/scripts/eksctl/"
 
 	defaultOwner             = "root:root"
 	defaultScriptPermissions = "0755"
@@ -91,7 +92,7 @@ func (c *CloudConfig) AddScript(p, s string) {
 
 // RunScript adds and runs a script on the node
 func (c *CloudConfig) RunScript(name, s string) {
-	p := scriptDir + name
+	p := path.Join(scriptDir, name)
 	c.AddScript(p, s)
 	c.AddCommand(p)
 }
@@ -129,7 +130,6 @@ func DecodeCloudConfig(s string) (*CloudConfig, error) {
 	if s == "" {
 		return nil, fmt.Errorf("cannot decode empty string")
 	}
-	c := New()
 
 	data, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
@@ -146,6 +146,7 @@ func DecodeCloudConfig(s string) (*CloudConfig, error) {
 		return nil, err
 	}
 
+	c := New()
 	err = yaml.Unmarshal(data, c)
 	if err != nil {
 		return nil, err

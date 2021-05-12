@@ -2,14 +2,23 @@ package v1alpha5
 
 import (
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/weaveworks/eksctl/pkg/git"
 )
 
 const (
-	iamPolicyAmazonEKSCNIPolicy = "AmazonEKS_CNI_Policy"
+	IAMPolicyAmazonEKSCNIPolicy = "AmazonEKS_CNI_Policy"
+)
+
+var (
+	AWSNodeMeta = ClusterIAMMeta{
+		Name:      "aws-node",
+		Namespace: "kube-system",
+	}
 )
 
 // SetClusterConfigDefaults will set defaults for a given cluster
@@ -26,58 +35,72 @@ func SetClusterConfigDefaults(cfg *ClusterConfig) {
 		cfg.IAM.VPCResourceControllerPolicy = Enabled()
 	}
 
-	if IsEnabled(cfg.IAM.WithOIDC) {
-		awsNode := ClusterIAMServiceAccount{
-			ClusterIAMMeta: ClusterIAMMeta{
-				Name:      "aws-node",
-				Namespace: "kube-system",
-			},
-			AttachPolicyARNs: []string{
-				fmt.Sprintf("arn:%s:iam::aws:policy/%s", Partition(cfg.Metadata.Region), iamPolicyAmazonEKSCNIPolicy),
-			},
-		}
-		cfg.IAM.ServiceAccounts = append(cfg.IAM.ServiceAccounts, &awsNode)
-	}
-
 	for _, sa := range cfg.IAM.ServiceAccounts {
 		if sa.Namespace == "" {
 			sa.Namespace = metav1.NamespaceDefault
 		}
 	}
 
-	if cfg.HasClusterCloudWatchLogging() && len(cfg.CloudWatch.ClusterLogging.EnableTypes) == 1 {
-		switch cfg.CloudWatch.ClusterLogging.EnableTypes[0] {
-		case "all", "*":
-			cfg.CloudWatch.ClusterLogging.EnableTypes = SupportedCloudWatchClusterLogTypes()
-		}
+	if cfg.HasClusterCloudWatchLogging() && cfg.ContainsWildcardCloudWatchLogging() {
+		cfg.CloudWatch.ClusterLogging.EnableTypes = SupportedCloudWatchClusterLogTypes()
 	}
 
 	if cfg.PrivateCluster == nil {
 		cfg.PrivateCluster = &PrivateCluster{}
 	}
+
+	if cfg.VPC != nil && cfg.VPC.ManageSharedNodeSecurityGroupRules == nil {
+		cfg.VPC.ManageSharedNodeSecurityGroupRules = Enabled()
+	}
+}
+
+// IAMServiceAccountsWithImplicitServiceAccounts adds implicitly created
+// IAM SAs that need to be explicitly deleted.
+func IAMServiceAccountsWithImplicitServiceAccounts(cfg *ClusterConfig) []*ClusterIAMServiceAccount {
+	serviceAccounts := cfg.IAM.ServiceAccounts
+	if IsEnabled(cfg.IAM.WithOIDC) && !vpccniAddonSpecified(cfg) {
+		var found bool
+		for _, sa := range cfg.IAM.ServiceAccounts {
+			found = found || (sa.Name == AWSNodeMeta.Name && sa.Namespace == AWSNodeMeta.Namespace)
+		}
+		if !found {
+			awsNode := ClusterIAMServiceAccount{
+				ClusterIAMMeta: AWSNodeMeta,
+				AttachPolicyARNs: []string{
+					fmt.Sprintf("arn:%s:iam::aws:policy/%s", Partition(cfg.Metadata.Region), IAMPolicyAmazonEKSCNIPolicy),
+				},
+			}
+			serviceAccounts = append(serviceAccounts, &awsNode)
+		}
+	}
+	return serviceAccounts
+}
+
+func vpccniAddonSpecified(cfg *ClusterConfig) bool {
+	for _, a := range cfg.Addons {
+		if strings.ToLower(a.Name) == "vpc-cni" {
+			return true
+		}
+	}
+	return false
 }
 
 // SetNodeGroupDefaults will set defaults for a given nodegroup
 func SetNodeGroupDefaults(ng *NodeGroup, meta *ClusterMeta) {
 	setNodeGroupBaseDefaults(ng.NodeGroupBase, meta)
 	if ng.InstanceType == "" {
-		if HasMixedInstances(ng) {
+		if HasMixedInstances(ng) || !ng.InstanceSelector.IsZero() {
 			ng.InstanceType = "mixed"
 		} else {
 			ng.InstanceType = DefaultNodeType
 		}
 	}
+
 	if ng.AMIFamily == "" {
 		ng.AMIFamily = DefaultNodeImageFamily
 	}
 
-	if !IsSetAndNonEmptyString(ng.VolumeType) {
-		ng.VolumeType = &DefaultNodeVolumeType
-	}
-
-	if ng.VolumeSize == nil {
-		ng.VolumeSize = &DefaultNodeVolumeSize
-	}
+	setVolumeDefaults(ng.NodeGroupBase, nil)
 
 	if ng.SecurityGroups.WithLocal == nil {
 		ng.SecurityGroups.WithLocal = Enabled()
@@ -97,7 +120,7 @@ func SetManagedNodeGroupDefaults(ng *ManagedNodeGroup, meta *ClusterMeta) {
 	if ng.AMIFamily == "" {
 		ng.AMIFamily = NodeImageFamilyAmazonLinux2
 	}
-	if ng.LaunchTemplate == nil && ng.InstanceType == "" {
+	if ng.LaunchTemplate == nil && ng.InstanceType == "" && len(ng.InstanceTypes) == 0 && ng.InstanceSelector.IsZero() {
 		ng.InstanceType = DefaultNodeType
 	}
 
@@ -106,6 +129,8 @@ func SetManagedNodeGroupDefaults(ng *ManagedNodeGroup, meta *ClusterMeta) {
 	}
 	ng.Tags[NodeGroupNameTag] = ng.Name
 	ng.Tags[NodeGroupTypeTag] = string(NodeGroupTypeManaged)
+
+	setVolumeDefaults(ng.NodeGroupBase, ng.LaunchTemplate)
 }
 
 func setNodeGroupBaseDefaults(ng *NodeGroupBase, meta *ClusterMeta) {
@@ -139,6 +164,29 @@ func setNodeGroupBaseDefaults(ng *NodeGroupBase, meta *ClusterMeta) {
 	if ng.DisablePodIMDS == nil {
 		ng.DisablePodIMDS = Disabled()
 	}
+	if ng.InstanceSelector == nil {
+		ng.InstanceSelector = &InstanceSelector{}
+	}
+}
+
+func setVolumeDefaults(ng *NodeGroupBase, template *LaunchTemplate) {
+	if ng.VolumeType == nil {
+		ng.VolumeType = &DefaultNodeVolumeType
+	}
+	if ng.VolumeSize == nil && template == nil {
+		ng.VolumeSize = &DefaultNodeVolumeSize
+	}
+	if *ng.VolumeType == NodeVolumeTypeGP3 {
+		if ng.VolumeIOPS == nil {
+			ng.VolumeIOPS = aws.Int(DefaultNodeVolumeGP3IOPS)
+		}
+		if ng.VolumeThroughput == nil {
+			ng.VolumeThroughput = aws.Int(DefaultNodeVolumeThroughput)
+		}
+	}
+	if *ng.VolumeType == NodeVolumeTypeIO1 && ng.VolumeIOPS == nil {
+		ng.VolumeIOPS = aws.Int(DefaultNodeVolumeIO1IOPS)
+	}
 }
 
 func setIAMDefaults(iamConfig *NodeGroupIAM) {
@@ -154,8 +202,8 @@ func setIAMDefaults(iamConfig *NodeGroupIAM) {
 	if iamConfig.WithAddonPolicies.CertManager == nil {
 		iamConfig.WithAddonPolicies.CertManager = Disabled()
 	}
-	if iamConfig.WithAddonPolicies.ALBIngress == nil {
-		iamConfig.WithAddonPolicies.ALBIngress = Disabled()
+	if iamConfig.WithAddonPolicies.AWSLoadBalancerController == nil {
+		iamConfig.WithAddonPolicies.AWSLoadBalancerController = Disabled()
 	}
 	if iamConfig.WithAddonPolicies.XRay == nil {
 		iamConfig.WithAddonPolicies.XRay = Disabled()
@@ -306,5 +354,25 @@ func SetDefaultGitSettings(c *ClusterConfig) {
 			}
 			profile.OutputPath = "./" + repoName
 		}
+	}
+}
+
+// SetDefaultGitOpsSettings sets the default values for the gitops repo and operator settings
+func SetDefaultGitOpsSettings(c *ClusterConfig) {
+	if c.GitOps == nil {
+		return
+	}
+
+	if c.GitOps.Flux != nil {
+		fluxCfg := c.GitOps.Flux
+		if fluxCfg.Namespace == "" {
+			fluxCfg.Namespace = "flux-system"
+		}
+
+		if fluxCfg.Path == "" {
+			fluxCfg.Path = "clusters/" + c.Metadata.Name
+		}
+
+		return
 	}
 }

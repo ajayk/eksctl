@@ -18,15 +18,21 @@ package eks
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/kris-nova/logger"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/request"
 )
 
-const maxRetries = 13
+const (
+	maxRetries          = 13
+	cfnMinThrottleDelay = 5 * time.Second
+)
 
 // LoggingRetryer adds some logging when we are retrying, so we have some idea what is happening
 // Right now it is very basic - e.g. it only logs when we retry (so doesn't log when we fail due to too many retries)
@@ -34,21 +40,52 @@ const maxRetries = 13
 // didn't export the constructor
 type LoggingRetryer struct {
 	client.DefaultRetryer
+	cfnRetryer client.DefaultRetryer
 }
 
 var _ request.Retryer = &LoggingRetryer{}
 
 func newLoggingRetryer() *LoggingRetryer {
 	return &LoggingRetryer{
-		client.DefaultRetryer{NumMaxRetries: maxRetries},
+		DefaultRetryer: client.DefaultRetryer{
+			NumMaxRetries: maxRetries,
+		},
+		cfnRetryer: client.DefaultRetryer{
+			NumMaxRetries:    maxRetries,
+			MinThrottleDelay: cfnMinThrottleDelay,
+		},
 	}
+}
+
+// ShouldRetry uses DefaultRetryer.ShouldRetry but also checks for non-retryable
+// EC2MetadataError (see #2564)
+func (l LoggingRetryer) ShouldRetry(r *request.Request) bool {
+	shouldRetry := l.DefaultRetryer.ShouldRetry(r)
+	if !shouldRetry {
+		return false
+	}
+	if aerr, ok := r.Error.(awserr.RequestFailure); ok && aerr != nil && aerr.Code() == "EC2MetadataError" {
+		switch aerr.StatusCode() {
+		case http.StatusForbidden, http.StatusNotFound, http.StatusMethodNotAllowed:
+			return false
+		}
+	}
+	return true
 }
 
 // RetryRules extends on DefaultRetryer.RetryRules
 func (l LoggingRetryer) RetryRules(r *request.Request) time.Duration {
-	duration := l.DefaultRetryer.RetryRules(r)
+	var (
+		duration time.Duration
+		service  = r.ClientInfo.ServiceName
+	)
 
-	service := r.ClientInfo.ServiceName
+	if r.IsErrorThrottle() && service == cloudformation.ServiceName && r.Operation.Name == "DescribeStacks" {
+		duration = l.cfnRetryer.RetryRules(r)
+	} else {
+		duration = l.DefaultRetryer.RetryRules(r)
+	}
+
 	name := "?"
 	if r.Operation != nil {
 		name = r.Operation.Name

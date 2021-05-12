@@ -22,21 +22,20 @@ func (c *StackCollection) MakeChangeSetName(action string) string {
 	return fmt.Sprintf("eksctl-%s-%d", action, time.Now().Unix())
 }
 
-func (c *StackCollection) makeClusterStackName() string {
+func (c *StackCollection) MakeClusterStackName() string {
 	return "eksctl-" + c.spec.Metadata.Name + "-cluster"
 }
 
 // createClusterTask creates the cluster
 func (c *StackCollection) createClusterTask(errs chan error, supportsManagedNodes bool) error {
-	name := c.makeClusterStackName()
+	name := c.MakeClusterStackName()
 	logger.Info("building cluster stack %q", name)
-	stack := builder.NewClusterResourceSet(c.provider, c.spec, supportsManagedNodes, nil)
+	stack := builder.NewClusterResourceSet(c.ec2API, c.region, c.spec, supportsManagedNodes, nil)
 	if err := stack.AddAllResources(); err != nil {
 		return err
 	}
 
-	// Unlike with `createNodeGroupTask`, all tags are already set for the cluster stack
-	return c.CreateStack(name, stack, nil, nil, errs)
+	return c.createClusterStack(name, stack, errs)
 }
 
 // DescribeClusterStack calls DescribeStacks and filters out cluster stack
@@ -44,6 +43,10 @@ func (c *StackCollection) DescribeClusterStack() (*Stack, error) {
 	stacks, err := c.DescribeStacks()
 	if err != nil {
 		return nil, err
+	}
+
+	if len(stacks) == 0 {
+		return nil, nil
 	}
 
 	for _, s := range stacks {
@@ -54,12 +57,13 @@ func (c *StackCollection) DescribeClusterStack() (*Stack, error) {
 			return s, nil
 		}
 	}
-	return nil, c.errStackNotFound()
+	return nil, nil
 }
 
 // RefreshFargatePodExecutionRoleARN reads the CloudFormation stacks and
 // their output values, and sets the Fargate pod execution role ARN to
-// the ClusterConfig.
+// the ClusterConfig. If there is no cluster stack found but a fargate stack
+// exists, use the output from that stack.
 func (c *StackCollection) RefreshFargatePodExecutionRoleARN() error {
 	fargateOutputs := map[string]outputs.Collector{
 		outputs.FargatePodExecutionRoleARN: func(v string) error {
@@ -71,28 +75,30 @@ func (c *StackCollection) RefreshFargatePodExecutionRoleARN() error {
 	if err != nil {
 		return err
 	}
-	if err := outputs.Collect(*stack, nil, fargateOutputs); err != nil {
-		return err
-	}
+	//check if fargate role is on the cluster stack
+	if stack != nil {
+		if err := outputs.Collect(*stack, nil, fargateOutputs); err != nil {
+			return err
+		}
 
-	if c.spec.IAM.FargatePodExecutionRoleARN == nil {
-		logger.Info("Fargate pod execution role is missing, fixing cluster stack to add Fargate resources")
-		if err := c.FixClusterCompatibility(); err != nil {
-			return errors.Wrap(err, "error fixing cluster compatibility")
+		if c.spec.IAM.FargatePodExecutionRoleARN != nil {
+			return nil
 		}
 	}
 
-	stack, err = c.DescribeClusterStack()
+	//check if fargate role is in separate stack
+	stack, err = c.GetFargateStack()
 	if err != nil {
 		return err
 	}
+
 	return outputs.Collect(*stack, fargateOutputs, nil)
 }
 
 // AppendNewClusterStackResource will update cluster
 // stack with new resources in append-only way
 func (c *StackCollection) AppendNewClusterStackResource(plan, supportsManagedNodes bool) (bool, error) {
-	name := c.makeClusterStackName()
+	name := c.MakeClusterStackName()
 
 	// NOTE: currently we can only append new resources to the stack,
 	// as there are a few limitations:
@@ -113,7 +119,7 @@ func (c *StackCollection) AppendNewClusterStackResource(plan, supportsManagedNod
 	}
 
 	logger.Info("re-building cluster stack %q", name)
-	newStack := builder.NewClusterResourceSet(c.provider, c.spec, supportsManagedNodes, &currentResources)
+	newStack := builder.NewClusterResourceSet(c.ec2API, c.region, c.spec, supportsManagedNodes, &currentResources)
 	if err := newStack.AddAllResources(); err != nil {
 		return false, err
 	}

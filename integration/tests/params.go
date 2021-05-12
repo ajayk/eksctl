@@ -15,30 +15,38 @@ import (
 	"github.com/weaveworks/eksctl/pkg/utils/names"
 )
 
+const (
+	owner = "eksctl-bot"
+)
+
 // Params groups all test parameters.
 type Params struct {
 	EksctlPath string
 	Region     string
 	Version    string
 	// Flags to help with the development of the integration tests
-	clusterNamePrefix string
-	ClusterName       string
-	SkipCreate        bool
-	SkipDelete        bool
-	KubeconfigPath    string
-	KubeconfigTemp    bool
-	TestDirectory     string
-	// privateSSHKeyPath is the SSH key to use for Git operations.
-	PrivateSSHKeyPath       string
-	EksctlCmd               runner.Cmd
-	EksctlCreateCmd         runner.Cmd
-	EksctlUpdateCmd         runner.Cmd
-	EksctlUpgradeCmd        runner.Cmd
-	EksctlGetCmd            runner.Cmd
-	EksctlDeleteCmd         runner.Cmd
-	EksctlDeleteClusterCmd  runner.Cmd
-	EksctlScaleNodeGroupCmd runner.Cmd
-	EksctlUtilsCmd          runner.Cmd
+	clusterNamePrefix        string
+	ClusterName              string
+	SkipCreate               bool
+	SkipDelete               bool
+	KubeconfigPath           string
+	GitopsOwner              string
+	KubeconfigTemp           bool
+	TestDirectory            string
+	EksctlCmd                runner.Cmd
+	EksctlCreateCmd          runner.Cmd
+	EksctlCreateNodegroupCmd runner.Cmd
+	EksctlUpgradeCmd         runner.Cmd
+	EksctlUpdateCmd          runner.Cmd
+	EksctlGetCmd             runner.Cmd
+	EksctlSetLabelsCmd       runner.Cmd
+	EksctlUnsetLabelsCmd     runner.Cmd
+	EksctlDeleteCmd          runner.Cmd
+	EksctlDeleteClusterCmd   runner.Cmd
+	EksctlDrainNodeGroupCmd  runner.Cmd
+	EksctlScaleNodeGroupCmd  runner.Cmd
+	EksctlUtilsCmd           runner.Cmd
+	EksctlEnableCmd          runner.Cmd
 	// Keep track of created clusters, for post-tests clean-up.
 	clustersToDelete []string
 }
@@ -64,17 +72,26 @@ func (p *Params) GenerateCommands() {
 
 	p.EksctlCreateCmd = p.EksctlCmd.
 		WithArgs("create").
-		WithTimeout(30 * time.Minute)
+		WithTimeout(90 * time.Minute)
+
+	p.EksctlUpgradeCmd = p.EksctlCmd.
+		WithArgs("upgrade").
+		WithTimeout(90 * time.Minute)
 
 	p.EksctlUpdateCmd = p.EksctlCmd.
 		WithArgs("update").
-		WithTimeout(55 * time.Minute)
-
-	p.EksctlUpgradeCmd = p.EksctlCmd.
-		WithArgs("upgrade")
+		WithTimeout(90 * time.Minute)
 
 	p.EksctlGetCmd = p.EksctlCmd.
 		WithArgs("get").
+		WithTimeout(1 * time.Minute)
+
+	p.EksctlSetLabelsCmd = p.EksctlCmd.
+		WithArgs("set", "labels").
+		WithTimeout(1 * time.Minute)
+
+	p.EksctlUnsetLabelsCmd = p.EksctlCmd.
+		WithArgs("unset", "labels").
 		WithTimeout(1 * time.Minute)
 
 	p.EksctlDeleteCmd = p.EksctlCmd.
@@ -82,7 +99,12 @@ func (p *Params) GenerateCommands() {
 		WithTimeout(15 * time.Minute)
 
 	p.EksctlDeleteClusterCmd = p.EksctlDeleteCmd.
-		WithArgs("cluster", "--verbose", "4")
+		WithArgs("cluster", "--verbose", "4").
+		WithTimeout(40 * time.Minute)
+
+	p.EksctlDrainNodeGroupCmd = p.EksctlCmd.
+		WithArgs("drain", "nodegroup", "--verbose", "4").
+		WithTimeout(10 * time.Minute)
 
 	p.EksctlScaleNodeGroupCmd = p.EksctlCmd.
 		WithArgs("scale", "nodegroup", "--verbose", "4").
@@ -91,6 +113,15 @@ func (p *Params) GenerateCommands() {
 	p.EksctlUtilsCmd = p.EksctlCmd.
 		WithArgs("utils").
 		WithTimeout(5 * time.Minute)
+
+	p.EksctlEnableCmd = runner.NewCmd(p.EksctlPath).
+		WithArgs("enable").
+		WithTimeout(10 * time.Minute)
+
+	p.EksctlCreateNodegroupCmd = runner.NewCmd(p.EksctlPath).
+		WithArgs("create", "nodegroup").
+		WithTimeout(40 * time.Minute)
+
 }
 
 // NewClusterName generates a new cluster name using the provided prefix, and
@@ -127,8 +158,7 @@ func (p Params) DeleteClusters() {
 }
 
 const (
-	defaultTestDirectory     = "test_profile"
-	defaultPrivateSSHKeyPath = "~/.ssh/eksctl-bot_id_rsa"
+	defaultTestDirectory = "test_profile"
 )
 
 // NewParams creates a new Test instance from CLI args, grouping all test parameters.
@@ -144,7 +174,7 @@ func NewParams(clusterNamePrefix string) *Params {
 	flag.BoolVar(&params.SkipCreate, "eksctl.skip.create", false, "Skip the creation tests. Useful for debugging the tests")
 	flag.BoolVar(&params.SkipDelete, "eksctl.skip.delete", false, "Skip the cleanup after the tests have run")
 	flag.StringVar(&params.KubeconfigPath, "eksctl.kubeconfig", "", "Path to kubeconfig (default: create a temporary file)")
-	flag.StringVar(&params.PrivateSSHKeyPath, "eksctl.git.sshkeypath", defaultPrivateSSHKeyPath, fmt.Sprintf("Path to the SSH key to use for Git operations (default: %s)", defaultPrivateSSHKeyPath))
+	flag.StringVar(&params.GitopsOwner, "eksctl.owner", "", "User or org name to create gitops repo under")
 
 	// go1.13+ testing flags regression fix: https://github.com/golang/go/issues/31859
 	flag.Parse()
@@ -155,6 +185,9 @@ func NewParams(clusterNamePrefix string) *Params {
 	}
 	if params.KubeconfigPath == "" {
 		params.GenerateKubeconfigPath()
+	}
+	if params.GitopsOwner == "" {
+		params.GitopsOwner = owner
 	}
 	params.GenerateCommands()
 	return &params

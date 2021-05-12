@@ -95,6 +95,84 @@ func (_m *EC2API) AcceptReservedInstancesExchangeQuoteWithContext(_a0 context.Co
 	return r0, r1
 }
 
+// AcceptTransitGatewayMulticastDomainAssociations provides a mock function with given fields: _a0
+func (_m *EC2API) AcceptTransitGatewayMulticastDomainAssociations(_a0 *ec2.AcceptTransitGatewayMulticastDomainAssociationsInput) (*ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput
+	if rf, ok := ret.Get(0).(func(*ec2.AcceptTransitGatewayMulticastDomainAssociationsInput) *ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.AcceptTransitGatewayMulticastDomainAssociationsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AcceptTransitGatewayMulticastDomainAssociationsRequest provides a mock function with given fields: _a0
+func (_m *EC2API) AcceptTransitGatewayMulticastDomainAssociationsRequest(_a0 *ec2.AcceptTransitGatewayMulticastDomainAssociationsInput) (*request.Request, *ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.AcceptTransitGatewayMulticastDomainAssociationsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput
+	if rf, ok := ret.Get(1).(func(*ec2.AcceptTransitGatewayMulticastDomainAssociationsInput) *ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// AcceptTransitGatewayMulticastDomainAssociationsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) AcceptTransitGatewayMulticastDomainAssociationsWithContext(_a0 context.Context, _a1 *ec2.AcceptTransitGatewayMulticastDomainAssociationsInput, _a2 ...request.Option) (*ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.AcceptTransitGatewayMulticastDomainAssociationsInput, ...request.Option) *ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.AcceptTransitGatewayMulticastDomainAssociationsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.AcceptTransitGatewayMulticastDomainAssociationsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AcceptTransitGatewayPeeringAttachment provides a mock function with given fields: _a0
 func (_m *EC2API) AcceptTransitGatewayPeeringAttachment(_a0 *ec2.AcceptTransitGatewayPeeringAttachmentInput) (*ec2.AcceptTransitGatewayPeeringAttachmentOutput, error) {
 	ret := _m.Called(_a0)
@@ -1101,6 +1179,84 @@ func (_m *EC2API) AssociateDhcpOptionsWithContext(_a0 context.Context, _a1 *ec2.
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.AssociateDhcpOptionsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AssociateEnclaveCertificateIamRole provides a mock function with given fields: _a0
+func (_m *EC2API) AssociateEnclaveCertificateIamRole(_a0 *ec2.AssociateEnclaveCertificateIamRoleInput) (*ec2.AssociateEnclaveCertificateIamRoleOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.AssociateEnclaveCertificateIamRoleOutput
+	if rf, ok := ret.Get(0).(func(*ec2.AssociateEnclaveCertificateIamRoleInput) *ec2.AssociateEnclaveCertificateIamRoleOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.AssociateEnclaveCertificateIamRoleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.AssociateEnclaveCertificateIamRoleInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AssociateEnclaveCertificateIamRoleRequest provides a mock function with given fields: _a0
+func (_m *EC2API) AssociateEnclaveCertificateIamRoleRequest(_a0 *ec2.AssociateEnclaveCertificateIamRoleInput) (*request.Request, *ec2.AssociateEnclaveCertificateIamRoleOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.AssociateEnclaveCertificateIamRoleInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.AssociateEnclaveCertificateIamRoleOutput
+	if rf, ok := ret.Get(1).(func(*ec2.AssociateEnclaveCertificateIamRoleInput) *ec2.AssociateEnclaveCertificateIamRoleOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.AssociateEnclaveCertificateIamRoleOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// AssociateEnclaveCertificateIamRoleWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) AssociateEnclaveCertificateIamRoleWithContext(_a0 context.Context, _a1 *ec2.AssociateEnclaveCertificateIamRoleInput, _a2 ...request.Option) (*ec2.AssociateEnclaveCertificateIamRoleOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.AssociateEnclaveCertificateIamRoleOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.AssociateEnclaveCertificateIamRoleInput, ...request.Option) *ec2.AssociateEnclaveCertificateIamRoleOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.AssociateEnclaveCertificateIamRoleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.AssociateEnclaveCertificateIamRoleInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -5087,6 +5243,84 @@ func (_m *EC2API) CreateNetworkAclWithContext(_a0 context.Context, _a1 *ec2.Crea
 	return r0, r1
 }
 
+// CreateNetworkInsightsPath provides a mock function with given fields: _a0
+func (_m *EC2API) CreateNetworkInsightsPath(_a0 *ec2.CreateNetworkInsightsPathInput) (*ec2.CreateNetworkInsightsPathOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.CreateNetworkInsightsPathOutput
+	if rf, ok := ret.Get(0).(func(*ec2.CreateNetworkInsightsPathInput) *ec2.CreateNetworkInsightsPathOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateNetworkInsightsPathOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.CreateNetworkInsightsPathInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateNetworkInsightsPathRequest provides a mock function with given fields: _a0
+func (_m *EC2API) CreateNetworkInsightsPathRequest(_a0 *ec2.CreateNetworkInsightsPathInput) (*request.Request, *ec2.CreateNetworkInsightsPathOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.CreateNetworkInsightsPathInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.CreateNetworkInsightsPathOutput
+	if rf, ok := ret.Get(1).(func(*ec2.CreateNetworkInsightsPathInput) *ec2.CreateNetworkInsightsPathOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.CreateNetworkInsightsPathOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateNetworkInsightsPathWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) CreateNetworkInsightsPathWithContext(_a0 context.Context, _a1 *ec2.CreateNetworkInsightsPathInput, _a2 ...request.Option) (*ec2.CreateNetworkInsightsPathOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.CreateNetworkInsightsPathOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.CreateNetworkInsightsPathInput, ...request.Option) *ec2.CreateNetworkInsightsPathOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateNetworkInsightsPathOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.CreateNetworkInsightsPathInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateNetworkInterface provides a mock function with given fields: _a0
 func (_m *EC2API) CreateNetworkInterface(_a0 *ec2.CreateNetworkInterfaceInput) (*ec2.CreateNetworkInterfaceOutput, error) {
 	ret := _m.Called(_a0)
@@ -5321,6 +5555,84 @@ func (_m *EC2API) CreatePlacementGroupWithContext(_a0 context.Context, _a1 *ec2.
 	return r0, r1
 }
 
+// CreateReplaceRootVolumeTask provides a mock function with given fields: _a0
+func (_m *EC2API) CreateReplaceRootVolumeTask(_a0 *ec2.CreateReplaceRootVolumeTaskInput) (*ec2.CreateReplaceRootVolumeTaskOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.CreateReplaceRootVolumeTaskOutput
+	if rf, ok := ret.Get(0).(func(*ec2.CreateReplaceRootVolumeTaskInput) *ec2.CreateReplaceRootVolumeTaskOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateReplaceRootVolumeTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.CreateReplaceRootVolumeTaskInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateReplaceRootVolumeTaskRequest provides a mock function with given fields: _a0
+func (_m *EC2API) CreateReplaceRootVolumeTaskRequest(_a0 *ec2.CreateReplaceRootVolumeTaskInput) (*request.Request, *ec2.CreateReplaceRootVolumeTaskOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.CreateReplaceRootVolumeTaskInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.CreateReplaceRootVolumeTaskOutput
+	if rf, ok := ret.Get(1).(func(*ec2.CreateReplaceRootVolumeTaskInput) *ec2.CreateReplaceRootVolumeTaskOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.CreateReplaceRootVolumeTaskOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateReplaceRootVolumeTaskWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) CreateReplaceRootVolumeTaskWithContext(_a0 context.Context, _a1 *ec2.CreateReplaceRootVolumeTaskInput, _a2 ...request.Option) (*ec2.CreateReplaceRootVolumeTaskOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.CreateReplaceRootVolumeTaskOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.CreateReplaceRootVolumeTaskInput, ...request.Option) *ec2.CreateReplaceRootVolumeTaskOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateReplaceRootVolumeTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.CreateReplaceRootVolumeTaskInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateReservedInstancesListing provides a mock function with given fields: _a0
 func (_m *EC2API) CreateReservedInstancesListing(_a0 *ec2.CreateReservedInstancesListingInput) (*ec2.CreateReservedInstancesListingOutput, error) {
 	ret := _m.Called(_a0)
@@ -5391,6 +5703,84 @@ func (_m *EC2API) CreateReservedInstancesListingWithContext(_a0 context.Context,
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.CreateReservedInstancesListingInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateRestoreImageTask provides a mock function with given fields: _a0
+func (_m *EC2API) CreateRestoreImageTask(_a0 *ec2.CreateRestoreImageTaskInput) (*ec2.CreateRestoreImageTaskOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.CreateRestoreImageTaskOutput
+	if rf, ok := ret.Get(0).(func(*ec2.CreateRestoreImageTaskInput) *ec2.CreateRestoreImageTaskOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateRestoreImageTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.CreateRestoreImageTaskInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateRestoreImageTaskRequest provides a mock function with given fields: _a0
+func (_m *EC2API) CreateRestoreImageTaskRequest(_a0 *ec2.CreateRestoreImageTaskInput) (*request.Request, *ec2.CreateRestoreImageTaskOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.CreateRestoreImageTaskInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.CreateRestoreImageTaskOutput
+	if rf, ok := ret.Get(1).(func(*ec2.CreateRestoreImageTaskInput) *ec2.CreateRestoreImageTaskOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.CreateRestoreImageTaskOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateRestoreImageTaskWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) CreateRestoreImageTaskWithContext(_a0 context.Context, _a1 *ec2.CreateRestoreImageTaskInput, _a2 ...request.Option) (*ec2.CreateRestoreImageTaskOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.CreateRestoreImageTaskOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.CreateRestoreImageTaskInput, ...request.Option) *ec2.CreateRestoreImageTaskOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateRestoreImageTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.CreateRestoreImageTaskInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -5859,6 +6249,84 @@ func (_m *EC2API) CreateSpotDatafeedSubscriptionWithContext(_a0 context.Context,
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.CreateSpotDatafeedSubscriptionInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateStoreImageTask provides a mock function with given fields: _a0
+func (_m *EC2API) CreateStoreImageTask(_a0 *ec2.CreateStoreImageTaskInput) (*ec2.CreateStoreImageTaskOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.CreateStoreImageTaskOutput
+	if rf, ok := ret.Get(0).(func(*ec2.CreateStoreImageTaskInput) *ec2.CreateStoreImageTaskOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateStoreImageTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.CreateStoreImageTaskInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateStoreImageTaskRequest provides a mock function with given fields: _a0
+func (_m *EC2API) CreateStoreImageTaskRequest(_a0 *ec2.CreateStoreImageTaskInput) (*request.Request, *ec2.CreateStoreImageTaskOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.CreateStoreImageTaskInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.CreateStoreImageTaskOutput
+	if rf, ok := ret.Get(1).(func(*ec2.CreateStoreImageTaskInput) *ec2.CreateStoreImageTaskOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.CreateStoreImageTaskOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateStoreImageTaskWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) CreateStoreImageTaskWithContext(_a0 context.Context, _a1 *ec2.CreateStoreImageTaskInput, _a2 ...request.Option) (*ec2.CreateStoreImageTaskOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.CreateStoreImageTaskOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.CreateStoreImageTaskInput, ...request.Option) *ec2.CreateStoreImageTaskOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateStoreImageTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.CreateStoreImageTaskInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -6351,6 +6819,162 @@ func (_m *EC2API) CreateTransitGateway(_a0 *ec2.CreateTransitGatewayInput) (*ec2
 	var r1 error
 	if rf, ok := ret.Get(1).(func(*ec2.CreateTransitGatewayInput) error); ok {
 		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateTransitGatewayConnect provides a mock function with given fields: _a0
+func (_m *EC2API) CreateTransitGatewayConnect(_a0 *ec2.CreateTransitGatewayConnectInput) (*ec2.CreateTransitGatewayConnectOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.CreateTransitGatewayConnectOutput
+	if rf, ok := ret.Get(0).(func(*ec2.CreateTransitGatewayConnectInput) *ec2.CreateTransitGatewayConnectOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateTransitGatewayConnectOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.CreateTransitGatewayConnectInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateTransitGatewayConnectPeer provides a mock function with given fields: _a0
+func (_m *EC2API) CreateTransitGatewayConnectPeer(_a0 *ec2.CreateTransitGatewayConnectPeerInput) (*ec2.CreateTransitGatewayConnectPeerOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.CreateTransitGatewayConnectPeerOutput
+	if rf, ok := ret.Get(0).(func(*ec2.CreateTransitGatewayConnectPeerInput) *ec2.CreateTransitGatewayConnectPeerOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateTransitGatewayConnectPeerOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.CreateTransitGatewayConnectPeerInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateTransitGatewayConnectPeerRequest provides a mock function with given fields: _a0
+func (_m *EC2API) CreateTransitGatewayConnectPeerRequest(_a0 *ec2.CreateTransitGatewayConnectPeerInput) (*request.Request, *ec2.CreateTransitGatewayConnectPeerOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.CreateTransitGatewayConnectPeerInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.CreateTransitGatewayConnectPeerOutput
+	if rf, ok := ret.Get(1).(func(*ec2.CreateTransitGatewayConnectPeerInput) *ec2.CreateTransitGatewayConnectPeerOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.CreateTransitGatewayConnectPeerOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateTransitGatewayConnectPeerWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) CreateTransitGatewayConnectPeerWithContext(_a0 context.Context, _a1 *ec2.CreateTransitGatewayConnectPeerInput, _a2 ...request.Option) (*ec2.CreateTransitGatewayConnectPeerOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.CreateTransitGatewayConnectPeerOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.CreateTransitGatewayConnectPeerInput, ...request.Option) *ec2.CreateTransitGatewayConnectPeerOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateTransitGatewayConnectPeerOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.CreateTransitGatewayConnectPeerInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateTransitGatewayConnectRequest provides a mock function with given fields: _a0
+func (_m *EC2API) CreateTransitGatewayConnectRequest(_a0 *ec2.CreateTransitGatewayConnectInput) (*request.Request, *ec2.CreateTransitGatewayConnectOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.CreateTransitGatewayConnectInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.CreateTransitGatewayConnectOutput
+	if rf, ok := ret.Get(1).(func(*ec2.CreateTransitGatewayConnectInput) *ec2.CreateTransitGatewayConnectOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.CreateTransitGatewayConnectOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateTransitGatewayConnectWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) CreateTransitGatewayConnectWithContext(_a0 context.Context, _a1 *ec2.CreateTransitGatewayConnectInput, _a2 ...request.Option) (*ec2.CreateTransitGatewayConnectOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.CreateTransitGatewayConnectOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.CreateTransitGatewayConnectInput, ...request.Option) *ec2.CreateTransitGatewayConnectOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.CreateTransitGatewayConnectOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.CreateTransitGatewayConnectInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -9065,6 +9689,162 @@ func (_m *EC2API) DeleteNetworkAclWithContext(_a0 context.Context, _a1 *ec2.Dele
 	return r0, r1
 }
 
+// DeleteNetworkInsightsAnalysis provides a mock function with given fields: _a0
+func (_m *EC2API) DeleteNetworkInsightsAnalysis(_a0 *ec2.DeleteNetworkInsightsAnalysisInput) (*ec2.DeleteNetworkInsightsAnalysisOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DeleteNetworkInsightsAnalysisOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DeleteNetworkInsightsAnalysisInput) *ec2.DeleteNetworkInsightsAnalysisOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DeleteNetworkInsightsAnalysisOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DeleteNetworkInsightsAnalysisInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteNetworkInsightsAnalysisRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DeleteNetworkInsightsAnalysisRequest(_a0 *ec2.DeleteNetworkInsightsAnalysisInput) (*request.Request, *ec2.DeleteNetworkInsightsAnalysisOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DeleteNetworkInsightsAnalysisInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DeleteNetworkInsightsAnalysisOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DeleteNetworkInsightsAnalysisInput) *ec2.DeleteNetworkInsightsAnalysisOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DeleteNetworkInsightsAnalysisOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteNetworkInsightsAnalysisWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DeleteNetworkInsightsAnalysisWithContext(_a0 context.Context, _a1 *ec2.DeleteNetworkInsightsAnalysisInput, _a2 ...request.Option) (*ec2.DeleteNetworkInsightsAnalysisOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DeleteNetworkInsightsAnalysisOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DeleteNetworkInsightsAnalysisInput, ...request.Option) *ec2.DeleteNetworkInsightsAnalysisOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DeleteNetworkInsightsAnalysisOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DeleteNetworkInsightsAnalysisInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteNetworkInsightsPath provides a mock function with given fields: _a0
+func (_m *EC2API) DeleteNetworkInsightsPath(_a0 *ec2.DeleteNetworkInsightsPathInput) (*ec2.DeleteNetworkInsightsPathOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DeleteNetworkInsightsPathOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DeleteNetworkInsightsPathInput) *ec2.DeleteNetworkInsightsPathOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DeleteNetworkInsightsPathOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DeleteNetworkInsightsPathInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteNetworkInsightsPathRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DeleteNetworkInsightsPathRequest(_a0 *ec2.DeleteNetworkInsightsPathInput) (*request.Request, *ec2.DeleteNetworkInsightsPathOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DeleteNetworkInsightsPathInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DeleteNetworkInsightsPathOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DeleteNetworkInsightsPathInput) *ec2.DeleteNetworkInsightsPathOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DeleteNetworkInsightsPathOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteNetworkInsightsPathWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DeleteNetworkInsightsPathWithContext(_a0 context.Context, _a1 *ec2.DeleteNetworkInsightsPathInput, _a2 ...request.Option) (*ec2.DeleteNetworkInsightsPathOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DeleteNetworkInsightsPathOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DeleteNetworkInsightsPathInput, ...request.Option) *ec2.DeleteNetworkInsightsPathOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DeleteNetworkInsightsPathOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DeleteNetworkInsightsPathInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeleteNetworkInterface provides a mock function with given fields: _a0
 func (_m *EC2API) DeleteNetworkInterface(_a0 *ec2.DeleteNetworkInterfaceInput) (*ec2.DeleteNetworkInterfaceOutput, error) {
 	ret := _m.Called(_a0)
@@ -10251,6 +11031,162 @@ func (_m *EC2API) DeleteTransitGateway(_a0 *ec2.DeleteTransitGatewayInput) (*ec2
 	var r1 error
 	if rf, ok := ret.Get(1).(func(*ec2.DeleteTransitGatewayInput) error); ok {
 		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteTransitGatewayConnect provides a mock function with given fields: _a0
+func (_m *EC2API) DeleteTransitGatewayConnect(_a0 *ec2.DeleteTransitGatewayConnectInput) (*ec2.DeleteTransitGatewayConnectOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DeleteTransitGatewayConnectOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DeleteTransitGatewayConnectInput) *ec2.DeleteTransitGatewayConnectOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DeleteTransitGatewayConnectOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DeleteTransitGatewayConnectInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteTransitGatewayConnectPeer provides a mock function with given fields: _a0
+func (_m *EC2API) DeleteTransitGatewayConnectPeer(_a0 *ec2.DeleteTransitGatewayConnectPeerInput) (*ec2.DeleteTransitGatewayConnectPeerOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DeleteTransitGatewayConnectPeerOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DeleteTransitGatewayConnectPeerInput) *ec2.DeleteTransitGatewayConnectPeerOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DeleteTransitGatewayConnectPeerOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DeleteTransitGatewayConnectPeerInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteTransitGatewayConnectPeerRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DeleteTransitGatewayConnectPeerRequest(_a0 *ec2.DeleteTransitGatewayConnectPeerInput) (*request.Request, *ec2.DeleteTransitGatewayConnectPeerOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DeleteTransitGatewayConnectPeerInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DeleteTransitGatewayConnectPeerOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DeleteTransitGatewayConnectPeerInput) *ec2.DeleteTransitGatewayConnectPeerOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DeleteTransitGatewayConnectPeerOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteTransitGatewayConnectPeerWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DeleteTransitGatewayConnectPeerWithContext(_a0 context.Context, _a1 *ec2.DeleteTransitGatewayConnectPeerInput, _a2 ...request.Option) (*ec2.DeleteTransitGatewayConnectPeerOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DeleteTransitGatewayConnectPeerOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DeleteTransitGatewayConnectPeerInput, ...request.Option) *ec2.DeleteTransitGatewayConnectPeerOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DeleteTransitGatewayConnectPeerOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DeleteTransitGatewayConnectPeerInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteTransitGatewayConnectRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DeleteTransitGatewayConnectRequest(_a0 *ec2.DeleteTransitGatewayConnectInput) (*request.Request, *ec2.DeleteTransitGatewayConnectOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DeleteTransitGatewayConnectInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DeleteTransitGatewayConnectOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DeleteTransitGatewayConnectInput) *ec2.DeleteTransitGatewayConnectOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DeleteTransitGatewayConnectOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteTransitGatewayConnectWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DeleteTransitGatewayConnectWithContext(_a0 context.Context, _a1 *ec2.DeleteTransitGatewayConnectInput, _a2 ...request.Option) (*ec2.DeleteTransitGatewayConnectOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DeleteTransitGatewayConnectOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DeleteTransitGatewayConnectInput, ...request.Option) *ec2.DeleteTransitGatewayConnectOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DeleteTransitGatewayConnectOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DeleteTransitGatewayConnectInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -11967,6 +12903,119 @@ func (_m *EC2API) DescribeAddresses(_a0 *ec2.DescribeAddressesInput) (*ec2.Descr
 	var r1 error
 	if rf, ok := ret.Get(1).(func(*ec2.DescribeAddressesInput) error); ok {
 		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAddressesAttribute provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeAddressesAttribute(_a0 *ec2.DescribeAddressesAttributeInput) (*ec2.DescribeAddressesAttributeOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribeAddressesAttributeOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeAddressesAttributeInput) *ec2.DescribeAddressesAttributeOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeAddressesAttributeOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeAddressesAttributeInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAddressesAttributePages provides a mock function with given fields: _a0, _a1
+func (_m *EC2API) DescribeAddressesAttributePages(_a0 *ec2.DescribeAddressesAttributeInput, _a1 func(*ec2.DescribeAddressesAttributeOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeAddressesAttributeInput, func(*ec2.DescribeAddressesAttributeOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeAddressesAttributePagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EC2API) DescribeAddressesAttributePagesWithContext(_a0 context.Context, _a1 *ec2.DescribeAddressesAttributeInput, _a2 func(*ec2.DescribeAddressesAttributeOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeAddressesAttributeInput, func(*ec2.DescribeAddressesAttributeOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeAddressesAttributeRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeAddressesAttributeRequest(_a0 *ec2.DescribeAddressesAttributeInput) (*request.Request, *ec2.DescribeAddressesAttributeOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeAddressesAttributeInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribeAddressesAttributeOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeAddressesAttributeInput) *ec2.DescribeAddressesAttributeOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribeAddressesAttributeOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeAddressesAttributeWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribeAddressesAttributeWithContext(_a0 context.Context, _a1 *ec2.DescribeAddressesAttributeInput, _a2 ...request.Option) (*ec2.DescribeAddressesAttributeOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribeAddressesAttributeOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeAddressesAttributeInput, ...request.Option) *ec2.DescribeAddressesAttributeOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeAddressesAttributeOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeAddressesAttributeInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -18101,6 +19150,232 @@ func (_m *EC2API) DescribeNetworkAclsWithContext(_a0 context.Context, _a1 *ec2.D
 	return r0, r1
 }
 
+// DescribeNetworkInsightsAnalyses provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeNetworkInsightsAnalyses(_a0 *ec2.DescribeNetworkInsightsAnalysesInput) (*ec2.DescribeNetworkInsightsAnalysesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribeNetworkInsightsAnalysesOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeNetworkInsightsAnalysesInput) *ec2.DescribeNetworkInsightsAnalysesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeNetworkInsightsAnalysesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeNetworkInsightsAnalysesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeNetworkInsightsAnalysesPages provides a mock function with given fields: _a0, _a1
+func (_m *EC2API) DescribeNetworkInsightsAnalysesPages(_a0 *ec2.DescribeNetworkInsightsAnalysesInput, _a1 func(*ec2.DescribeNetworkInsightsAnalysesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeNetworkInsightsAnalysesInput, func(*ec2.DescribeNetworkInsightsAnalysesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeNetworkInsightsAnalysesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EC2API) DescribeNetworkInsightsAnalysesPagesWithContext(_a0 context.Context, _a1 *ec2.DescribeNetworkInsightsAnalysesInput, _a2 func(*ec2.DescribeNetworkInsightsAnalysesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeNetworkInsightsAnalysesInput, func(*ec2.DescribeNetworkInsightsAnalysesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeNetworkInsightsAnalysesRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeNetworkInsightsAnalysesRequest(_a0 *ec2.DescribeNetworkInsightsAnalysesInput) (*request.Request, *ec2.DescribeNetworkInsightsAnalysesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeNetworkInsightsAnalysesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribeNetworkInsightsAnalysesOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeNetworkInsightsAnalysesInput) *ec2.DescribeNetworkInsightsAnalysesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribeNetworkInsightsAnalysesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeNetworkInsightsAnalysesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribeNetworkInsightsAnalysesWithContext(_a0 context.Context, _a1 *ec2.DescribeNetworkInsightsAnalysesInput, _a2 ...request.Option) (*ec2.DescribeNetworkInsightsAnalysesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribeNetworkInsightsAnalysesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeNetworkInsightsAnalysesInput, ...request.Option) *ec2.DescribeNetworkInsightsAnalysesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeNetworkInsightsAnalysesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeNetworkInsightsAnalysesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeNetworkInsightsPaths provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeNetworkInsightsPaths(_a0 *ec2.DescribeNetworkInsightsPathsInput) (*ec2.DescribeNetworkInsightsPathsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribeNetworkInsightsPathsOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeNetworkInsightsPathsInput) *ec2.DescribeNetworkInsightsPathsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeNetworkInsightsPathsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeNetworkInsightsPathsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeNetworkInsightsPathsPages provides a mock function with given fields: _a0, _a1
+func (_m *EC2API) DescribeNetworkInsightsPathsPages(_a0 *ec2.DescribeNetworkInsightsPathsInput, _a1 func(*ec2.DescribeNetworkInsightsPathsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeNetworkInsightsPathsInput, func(*ec2.DescribeNetworkInsightsPathsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeNetworkInsightsPathsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EC2API) DescribeNetworkInsightsPathsPagesWithContext(_a0 context.Context, _a1 *ec2.DescribeNetworkInsightsPathsInput, _a2 func(*ec2.DescribeNetworkInsightsPathsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeNetworkInsightsPathsInput, func(*ec2.DescribeNetworkInsightsPathsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeNetworkInsightsPathsRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeNetworkInsightsPathsRequest(_a0 *ec2.DescribeNetworkInsightsPathsInput) (*request.Request, *ec2.DescribeNetworkInsightsPathsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeNetworkInsightsPathsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribeNetworkInsightsPathsOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeNetworkInsightsPathsInput) *ec2.DescribeNetworkInsightsPathsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribeNetworkInsightsPathsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeNetworkInsightsPathsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribeNetworkInsightsPathsWithContext(_a0 context.Context, _a1 *ec2.DescribeNetworkInsightsPathsInput, _a2 ...request.Option) (*ec2.DescribeNetworkInsightsPathsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribeNetworkInsightsPathsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeNetworkInsightsPathsInput, ...request.Option) *ec2.DescribeNetworkInsightsPathsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeNetworkInsightsPathsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeNetworkInsightsPathsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeNetworkInterfaceAttribute provides a mock function with given fields: _a0
 func (_m *EC2API) DescribeNetworkInterfaceAttribute(_a0 *ec2.DescribeNetworkInterfaceAttributeInput) (*ec2.DescribeNetworkInterfaceAttributeOutput, error) {
 	ret := _m.Called(_a0)
@@ -18892,6 +20167,119 @@ func (_m *EC2API) DescribeRegionsWithContext(_a0 context.Context, _a1 *ec2.Descr
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeRegionsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeReplaceRootVolumeTasks provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeReplaceRootVolumeTasks(_a0 *ec2.DescribeReplaceRootVolumeTasksInput) (*ec2.DescribeReplaceRootVolumeTasksOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribeReplaceRootVolumeTasksOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeReplaceRootVolumeTasksInput) *ec2.DescribeReplaceRootVolumeTasksOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeReplaceRootVolumeTasksOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeReplaceRootVolumeTasksInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeReplaceRootVolumeTasksPages provides a mock function with given fields: _a0, _a1
+func (_m *EC2API) DescribeReplaceRootVolumeTasksPages(_a0 *ec2.DescribeReplaceRootVolumeTasksInput, _a1 func(*ec2.DescribeReplaceRootVolumeTasksOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeReplaceRootVolumeTasksInput, func(*ec2.DescribeReplaceRootVolumeTasksOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeReplaceRootVolumeTasksPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EC2API) DescribeReplaceRootVolumeTasksPagesWithContext(_a0 context.Context, _a1 *ec2.DescribeReplaceRootVolumeTasksInput, _a2 func(*ec2.DescribeReplaceRootVolumeTasksOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeReplaceRootVolumeTasksInput, func(*ec2.DescribeReplaceRootVolumeTasksOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeReplaceRootVolumeTasksRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeReplaceRootVolumeTasksRequest(_a0 *ec2.DescribeReplaceRootVolumeTasksInput) (*request.Request, *ec2.DescribeReplaceRootVolumeTasksOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeReplaceRootVolumeTasksInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribeReplaceRootVolumeTasksOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeReplaceRootVolumeTasksInput) *ec2.DescribeReplaceRootVolumeTasksOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribeReplaceRootVolumeTasksOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeReplaceRootVolumeTasksWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribeReplaceRootVolumeTasksWithContext(_a0 context.Context, _a1 *ec2.DescribeReplaceRootVolumeTasksInput, _a2 ...request.Option) (*ec2.DescribeReplaceRootVolumeTasksOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribeReplaceRootVolumeTasksOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeReplaceRootVolumeTasksInput, ...request.Option) *ec2.DescribeReplaceRootVolumeTasksOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeReplaceRootVolumeTasksOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeReplaceRootVolumeTasksInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -20689,6 +22077,119 @@ func (_m *EC2API) DescribeStaleSecurityGroupsWithContext(_a0 context.Context, _a
 	return r0, r1
 }
 
+// DescribeStoreImageTasks provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeStoreImageTasks(_a0 *ec2.DescribeStoreImageTasksInput) (*ec2.DescribeStoreImageTasksOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribeStoreImageTasksOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeStoreImageTasksInput) *ec2.DescribeStoreImageTasksOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeStoreImageTasksOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeStoreImageTasksInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeStoreImageTasksPages provides a mock function with given fields: _a0, _a1
+func (_m *EC2API) DescribeStoreImageTasksPages(_a0 *ec2.DescribeStoreImageTasksInput, _a1 func(*ec2.DescribeStoreImageTasksOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeStoreImageTasksInput, func(*ec2.DescribeStoreImageTasksOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeStoreImageTasksPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EC2API) DescribeStoreImageTasksPagesWithContext(_a0 context.Context, _a1 *ec2.DescribeStoreImageTasksInput, _a2 func(*ec2.DescribeStoreImageTasksOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeStoreImageTasksInput, func(*ec2.DescribeStoreImageTasksOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeStoreImageTasksRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeStoreImageTasksRequest(_a0 *ec2.DescribeStoreImageTasksInput) (*request.Request, *ec2.DescribeStoreImageTasksOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeStoreImageTasksInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribeStoreImageTasksOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeStoreImageTasksInput) *ec2.DescribeStoreImageTasksOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribeStoreImageTasksOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeStoreImageTasksWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribeStoreImageTasksWithContext(_a0 context.Context, _a1 *ec2.DescribeStoreImageTasksInput, _a2 ...request.Option) (*ec2.DescribeStoreImageTasksOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribeStoreImageTasksOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeStoreImageTasksInput, ...request.Option) *ec2.DescribeStoreImageTasksOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeStoreImageTasksOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeStoreImageTasksInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeSubnets provides a mock function with given fields: _a0
 func (_m *EC2API) DescribeSubnets(_a0 *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
 	ret := _m.Called(_a0)
@@ -21359,6 +22860,232 @@ func (_m *EC2API) DescribeTransitGatewayAttachmentsWithContext(_a0 context.Conte
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeTransitGatewayAttachmentsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeTransitGatewayConnectPeers provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeTransitGatewayConnectPeers(_a0 *ec2.DescribeTransitGatewayConnectPeersInput) (*ec2.DescribeTransitGatewayConnectPeersOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribeTransitGatewayConnectPeersOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeTransitGatewayConnectPeersInput) *ec2.DescribeTransitGatewayConnectPeersOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeTransitGatewayConnectPeersOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeTransitGatewayConnectPeersInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeTransitGatewayConnectPeersPages provides a mock function with given fields: _a0, _a1
+func (_m *EC2API) DescribeTransitGatewayConnectPeersPages(_a0 *ec2.DescribeTransitGatewayConnectPeersInput, _a1 func(*ec2.DescribeTransitGatewayConnectPeersOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeTransitGatewayConnectPeersInput, func(*ec2.DescribeTransitGatewayConnectPeersOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeTransitGatewayConnectPeersPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EC2API) DescribeTransitGatewayConnectPeersPagesWithContext(_a0 context.Context, _a1 *ec2.DescribeTransitGatewayConnectPeersInput, _a2 func(*ec2.DescribeTransitGatewayConnectPeersOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeTransitGatewayConnectPeersInput, func(*ec2.DescribeTransitGatewayConnectPeersOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeTransitGatewayConnectPeersRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeTransitGatewayConnectPeersRequest(_a0 *ec2.DescribeTransitGatewayConnectPeersInput) (*request.Request, *ec2.DescribeTransitGatewayConnectPeersOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeTransitGatewayConnectPeersInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribeTransitGatewayConnectPeersOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeTransitGatewayConnectPeersInput) *ec2.DescribeTransitGatewayConnectPeersOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribeTransitGatewayConnectPeersOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeTransitGatewayConnectPeersWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribeTransitGatewayConnectPeersWithContext(_a0 context.Context, _a1 *ec2.DescribeTransitGatewayConnectPeersInput, _a2 ...request.Option) (*ec2.DescribeTransitGatewayConnectPeersOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribeTransitGatewayConnectPeersOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeTransitGatewayConnectPeersInput, ...request.Option) *ec2.DescribeTransitGatewayConnectPeersOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeTransitGatewayConnectPeersOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeTransitGatewayConnectPeersInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeTransitGatewayConnects provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeTransitGatewayConnects(_a0 *ec2.DescribeTransitGatewayConnectsInput) (*ec2.DescribeTransitGatewayConnectsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DescribeTransitGatewayConnectsOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeTransitGatewayConnectsInput) *ec2.DescribeTransitGatewayConnectsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeTransitGatewayConnectsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeTransitGatewayConnectsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeTransitGatewayConnectsPages provides a mock function with given fields: _a0, _a1
+func (_m *EC2API) DescribeTransitGatewayConnectsPages(_a0 *ec2.DescribeTransitGatewayConnectsInput, _a1 func(*ec2.DescribeTransitGatewayConnectsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeTransitGatewayConnectsInput, func(*ec2.DescribeTransitGatewayConnectsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeTransitGatewayConnectsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EC2API) DescribeTransitGatewayConnectsPagesWithContext(_a0 context.Context, _a1 *ec2.DescribeTransitGatewayConnectsInput, _a2 func(*ec2.DescribeTransitGatewayConnectsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeTransitGatewayConnectsInput, func(*ec2.DescribeTransitGatewayConnectsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeTransitGatewayConnectsRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DescribeTransitGatewayConnectsRequest(_a0 *ec2.DescribeTransitGatewayConnectsInput) (*request.Request, *ec2.DescribeTransitGatewayConnectsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DescribeTransitGatewayConnectsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DescribeTransitGatewayConnectsOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DescribeTransitGatewayConnectsInput) *ec2.DescribeTransitGatewayConnectsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DescribeTransitGatewayConnectsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeTransitGatewayConnectsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DescribeTransitGatewayConnectsWithContext(_a0 context.Context, _a1 *ec2.DescribeTransitGatewayConnectsInput, _a2 ...request.Option) (*ec2.DescribeTransitGatewayConnectsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DescribeTransitGatewayConnectsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DescribeTransitGatewayConnectsInput, ...request.Option) *ec2.DescribeTransitGatewayConnectsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DescribeTransitGatewayConnectsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DescribeTransitGatewayConnectsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -24189,6 +25916,84 @@ func (_m *EC2API) DisableFastSnapshotRestoresWithContext(_a0 context.Context, _a
 	return r0, r1
 }
 
+// DisableSerialConsoleAccess provides a mock function with given fields: _a0
+func (_m *EC2API) DisableSerialConsoleAccess(_a0 *ec2.DisableSerialConsoleAccessInput) (*ec2.DisableSerialConsoleAccessOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DisableSerialConsoleAccessOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DisableSerialConsoleAccessInput) *ec2.DisableSerialConsoleAccessOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DisableSerialConsoleAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DisableSerialConsoleAccessInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DisableSerialConsoleAccessRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DisableSerialConsoleAccessRequest(_a0 *ec2.DisableSerialConsoleAccessInput) (*request.Request, *ec2.DisableSerialConsoleAccessOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DisableSerialConsoleAccessInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DisableSerialConsoleAccessOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DisableSerialConsoleAccessInput) *ec2.DisableSerialConsoleAccessOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DisableSerialConsoleAccessOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DisableSerialConsoleAccessWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DisableSerialConsoleAccessWithContext(_a0 context.Context, _a1 *ec2.DisableSerialConsoleAccessInput, _a2 ...request.Option) (*ec2.DisableSerialConsoleAccessOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DisableSerialConsoleAccessOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DisableSerialConsoleAccessInput, ...request.Option) *ec2.DisableSerialConsoleAccessOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DisableSerialConsoleAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DisableSerialConsoleAccessInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DisableTransitGatewayRouteTablePropagation provides a mock function with given fields: _a0
 func (_m *EC2API) DisableTransitGatewayRouteTablePropagation(_a0 *ec2.DisableTransitGatewayRouteTablePropagationInput) (*ec2.DisableTransitGatewayRouteTablePropagationOutput, error) {
 	ret := _m.Called(_a0)
@@ -24649,6 +26454,84 @@ func (_m *EC2API) DisassociateClientVpnTargetNetworkWithContext(_a0 context.Cont
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DisassociateClientVpnTargetNetworkInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DisassociateEnclaveCertificateIamRole provides a mock function with given fields: _a0
+func (_m *EC2API) DisassociateEnclaveCertificateIamRole(_a0 *ec2.DisassociateEnclaveCertificateIamRoleInput) (*ec2.DisassociateEnclaveCertificateIamRoleOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.DisassociateEnclaveCertificateIamRoleOutput
+	if rf, ok := ret.Get(0).(func(*ec2.DisassociateEnclaveCertificateIamRoleInput) *ec2.DisassociateEnclaveCertificateIamRoleOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DisassociateEnclaveCertificateIamRoleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.DisassociateEnclaveCertificateIamRoleInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DisassociateEnclaveCertificateIamRoleRequest provides a mock function with given fields: _a0
+func (_m *EC2API) DisassociateEnclaveCertificateIamRoleRequest(_a0 *ec2.DisassociateEnclaveCertificateIamRoleInput) (*request.Request, *ec2.DisassociateEnclaveCertificateIamRoleOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.DisassociateEnclaveCertificateIamRoleInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.DisassociateEnclaveCertificateIamRoleOutput
+	if rf, ok := ret.Get(1).(func(*ec2.DisassociateEnclaveCertificateIamRoleInput) *ec2.DisassociateEnclaveCertificateIamRoleOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.DisassociateEnclaveCertificateIamRoleOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DisassociateEnclaveCertificateIamRoleWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) DisassociateEnclaveCertificateIamRoleWithContext(_a0 context.Context, _a1 *ec2.DisassociateEnclaveCertificateIamRoleInput, _a2 ...request.Option) (*ec2.DisassociateEnclaveCertificateIamRoleOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.DisassociateEnclaveCertificateIamRoleOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.DisassociateEnclaveCertificateIamRoleInput, ...request.Option) *ec2.DisassociateEnclaveCertificateIamRoleOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.DisassociateEnclaveCertificateIamRoleOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.DisassociateEnclaveCertificateIamRoleInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -25273,6 +27156,84 @@ func (_m *EC2API) EnableFastSnapshotRestoresWithContext(_a0 context.Context, _a1
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.EnableFastSnapshotRestoresInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// EnableSerialConsoleAccess provides a mock function with given fields: _a0
+func (_m *EC2API) EnableSerialConsoleAccess(_a0 *ec2.EnableSerialConsoleAccessInput) (*ec2.EnableSerialConsoleAccessOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.EnableSerialConsoleAccessOutput
+	if rf, ok := ret.Get(0).(func(*ec2.EnableSerialConsoleAccessInput) *ec2.EnableSerialConsoleAccessOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.EnableSerialConsoleAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.EnableSerialConsoleAccessInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// EnableSerialConsoleAccessRequest provides a mock function with given fields: _a0
+func (_m *EC2API) EnableSerialConsoleAccessRequest(_a0 *ec2.EnableSerialConsoleAccessInput) (*request.Request, *ec2.EnableSerialConsoleAccessOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.EnableSerialConsoleAccessInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.EnableSerialConsoleAccessOutput
+	if rf, ok := ret.Get(1).(func(*ec2.EnableSerialConsoleAccessInput) *ec2.EnableSerialConsoleAccessOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.EnableSerialConsoleAccessOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// EnableSerialConsoleAccessWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) EnableSerialConsoleAccessWithContext(_a0 context.Context, _a1 *ec2.EnableSerialConsoleAccessInput, _a2 ...request.Option) (*ec2.EnableSerialConsoleAccessOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.EnableSerialConsoleAccessOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.EnableSerialConsoleAccessInput, ...request.Option) *ec2.EnableSerialConsoleAccessOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.EnableSerialConsoleAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.EnableSerialConsoleAccessInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -25983,6 +27944,84 @@ func (_m *EC2API) ExportTransitGatewayRoutesWithContext(_a0 context.Context, _a1
 	return r0, r1
 }
 
+// GetAssociatedEnclaveCertificateIamRoles provides a mock function with given fields: _a0
+func (_m *EC2API) GetAssociatedEnclaveCertificateIamRoles(_a0 *ec2.GetAssociatedEnclaveCertificateIamRolesInput) (*ec2.GetAssociatedEnclaveCertificateIamRolesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.GetAssociatedEnclaveCertificateIamRolesOutput
+	if rf, ok := ret.Get(0).(func(*ec2.GetAssociatedEnclaveCertificateIamRolesInput) *ec2.GetAssociatedEnclaveCertificateIamRolesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.GetAssociatedEnclaveCertificateIamRolesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.GetAssociatedEnclaveCertificateIamRolesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetAssociatedEnclaveCertificateIamRolesRequest provides a mock function with given fields: _a0
+func (_m *EC2API) GetAssociatedEnclaveCertificateIamRolesRequest(_a0 *ec2.GetAssociatedEnclaveCertificateIamRolesInput) (*request.Request, *ec2.GetAssociatedEnclaveCertificateIamRolesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.GetAssociatedEnclaveCertificateIamRolesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.GetAssociatedEnclaveCertificateIamRolesOutput
+	if rf, ok := ret.Get(1).(func(*ec2.GetAssociatedEnclaveCertificateIamRolesInput) *ec2.GetAssociatedEnclaveCertificateIamRolesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.GetAssociatedEnclaveCertificateIamRolesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetAssociatedEnclaveCertificateIamRolesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) GetAssociatedEnclaveCertificateIamRolesWithContext(_a0 context.Context, _a1 *ec2.GetAssociatedEnclaveCertificateIamRolesInput, _a2 ...request.Option) (*ec2.GetAssociatedEnclaveCertificateIamRolesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.GetAssociatedEnclaveCertificateIamRolesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.GetAssociatedEnclaveCertificateIamRolesInput, ...request.Option) *ec2.GetAssociatedEnclaveCertificateIamRolesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.GetAssociatedEnclaveCertificateIamRolesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.GetAssociatedEnclaveCertificateIamRolesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetAssociatedIpv6PoolCidrs provides a mock function with given fields: _a0
 func (_m *EC2API) GetAssociatedIpv6PoolCidrs(_a0 *ec2.GetAssociatedIpv6PoolCidrsInput) (*ec2.GetAssociatedIpv6PoolCidrsOutput, error) {
 	ret := _m.Called(_a0)
@@ -26642,6 +28681,84 @@ func (_m *EC2API) GetEbsEncryptionByDefaultWithContext(_a0 context.Context, _a1 
 	return r0, r1
 }
 
+// GetFlowLogsIntegrationTemplate provides a mock function with given fields: _a0
+func (_m *EC2API) GetFlowLogsIntegrationTemplate(_a0 *ec2.GetFlowLogsIntegrationTemplateInput) (*ec2.GetFlowLogsIntegrationTemplateOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.GetFlowLogsIntegrationTemplateOutput
+	if rf, ok := ret.Get(0).(func(*ec2.GetFlowLogsIntegrationTemplateInput) *ec2.GetFlowLogsIntegrationTemplateOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.GetFlowLogsIntegrationTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.GetFlowLogsIntegrationTemplateInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetFlowLogsIntegrationTemplateRequest provides a mock function with given fields: _a0
+func (_m *EC2API) GetFlowLogsIntegrationTemplateRequest(_a0 *ec2.GetFlowLogsIntegrationTemplateInput) (*request.Request, *ec2.GetFlowLogsIntegrationTemplateOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.GetFlowLogsIntegrationTemplateInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.GetFlowLogsIntegrationTemplateOutput
+	if rf, ok := ret.Get(1).(func(*ec2.GetFlowLogsIntegrationTemplateInput) *ec2.GetFlowLogsIntegrationTemplateOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.GetFlowLogsIntegrationTemplateOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetFlowLogsIntegrationTemplateWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) GetFlowLogsIntegrationTemplateWithContext(_a0 context.Context, _a1 *ec2.GetFlowLogsIntegrationTemplateInput, _a2 ...request.Option) (*ec2.GetFlowLogsIntegrationTemplateOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.GetFlowLogsIntegrationTemplateOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.GetFlowLogsIntegrationTemplateInput, ...request.Option) *ec2.GetFlowLogsIntegrationTemplateOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.GetFlowLogsIntegrationTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.GetFlowLogsIntegrationTemplateInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetGroupsForCapacityReservation provides a mock function with given fields: _a0
 func (_m *EC2API) GetGroupsForCapacityReservation(_a0 *ec2.GetGroupsForCapacityReservationInput) (*ec2.GetGroupsForCapacityReservationOutput, error) {
 	ret := _m.Called(_a0)
@@ -27285,6 +29402,84 @@ func (_m *EC2API) GetReservedInstancesExchangeQuoteWithContext(_a0 context.Conte
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.GetReservedInstancesExchangeQuoteInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetSerialConsoleAccessStatus provides a mock function with given fields: _a0
+func (_m *EC2API) GetSerialConsoleAccessStatus(_a0 *ec2.GetSerialConsoleAccessStatusInput) (*ec2.GetSerialConsoleAccessStatusOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.GetSerialConsoleAccessStatusOutput
+	if rf, ok := ret.Get(0).(func(*ec2.GetSerialConsoleAccessStatusInput) *ec2.GetSerialConsoleAccessStatusOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.GetSerialConsoleAccessStatusOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.GetSerialConsoleAccessStatusInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetSerialConsoleAccessStatusRequest provides a mock function with given fields: _a0
+func (_m *EC2API) GetSerialConsoleAccessStatusRequest(_a0 *ec2.GetSerialConsoleAccessStatusInput) (*request.Request, *ec2.GetSerialConsoleAccessStatusOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.GetSerialConsoleAccessStatusInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.GetSerialConsoleAccessStatusOutput
+	if rf, ok := ret.Get(1).(func(*ec2.GetSerialConsoleAccessStatusInput) *ec2.GetSerialConsoleAccessStatusOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.GetSerialConsoleAccessStatusOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetSerialConsoleAccessStatusWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) GetSerialConsoleAccessStatusWithContext(_a0 context.Context, _a1 *ec2.GetSerialConsoleAccessStatusInput, _a2 ...request.Option) (*ec2.GetSerialConsoleAccessStatusOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.GetSerialConsoleAccessStatusOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.GetSerialConsoleAccessStatusInput, ...request.Option) *ec2.GetSerialConsoleAccessStatusOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.GetSerialConsoleAccessStatusOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.GetSerialConsoleAccessStatusInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -28318,6 +30513,84 @@ func (_m *EC2API) ImportVolumeWithContext(_a0 context.Context, _a1 *ec2.ImportVo
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.ImportVolumeInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ModifyAddressAttribute provides a mock function with given fields: _a0
+func (_m *EC2API) ModifyAddressAttribute(_a0 *ec2.ModifyAddressAttributeInput) (*ec2.ModifyAddressAttributeOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.ModifyAddressAttributeOutput
+	if rf, ok := ret.Get(0).(func(*ec2.ModifyAddressAttributeInput) *ec2.ModifyAddressAttributeOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.ModifyAddressAttributeOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.ModifyAddressAttributeInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ModifyAddressAttributeRequest provides a mock function with given fields: _a0
+func (_m *EC2API) ModifyAddressAttributeRequest(_a0 *ec2.ModifyAddressAttributeInput) (*request.Request, *ec2.ModifyAddressAttributeOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.ModifyAddressAttributeInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.ModifyAddressAttributeOutput
+	if rf, ok := ret.Get(1).(func(*ec2.ModifyAddressAttributeInput) *ec2.ModifyAddressAttributeOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.ModifyAddressAttributeOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ModifyAddressAttributeWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) ModifyAddressAttributeWithContext(_a0 context.Context, _a1 *ec2.ModifyAddressAttributeInput, _a2 ...request.Option) (*ec2.ModifyAddressAttributeOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.ModifyAddressAttributeOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.ModifyAddressAttributeInput, ...request.Option) *ec2.ModifyAddressAttributeOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.ModifyAddressAttributeOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.ModifyAddressAttributeInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -32538,6 +34811,84 @@ func (_m *EC2API) RegisterTransitGatewayMulticastGroupSourcesWithContext(_a0 con
 	return r0, r1
 }
 
+// RejectTransitGatewayMulticastDomainAssociations provides a mock function with given fields: _a0
+func (_m *EC2API) RejectTransitGatewayMulticastDomainAssociations(_a0 *ec2.RejectTransitGatewayMulticastDomainAssociationsInput) (*ec2.RejectTransitGatewayMulticastDomainAssociationsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.RejectTransitGatewayMulticastDomainAssociationsOutput
+	if rf, ok := ret.Get(0).(func(*ec2.RejectTransitGatewayMulticastDomainAssociationsInput) *ec2.RejectTransitGatewayMulticastDomainAssociationsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.RejectTransitGatewayMulticastDomainAssociationsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.RejectTransitGatewayMulticastDomainAssociationsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// RejectTransitGatewayMulticastDomainAssociationsRequest provides a mock function with given fields: _a0
+func (_m *EC2API) RejectTransitGatewayMulticastDomainAssociationsRequest(_a0 *ec2.RejectTransitGatewayMulticastDomainAssociationsInput) (*request.Request, *ec2.RejectTransitGatewayMulticastDomainAssociationsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.RejectTransitGatewayMulticastDomainAssociationsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.RejectTransitGatewayMulticastDomainAssociationsOutput
+	if rf, ok := ret.Get(1).(func(*ec2.RejectTransitGatewayMulticastDomainAssociationsInput) *ec2.RejectTransitGatewayMulticastDomainAssociationsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.RejectTransitGatewayMulticastDomainAssociationsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// RejectTransitGatewayMulticastDomainAssociationsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) RejectTransitGatewayMulticastDomainAssociationsWithContext(_a0 context.Context, _a1 *ec2.RejectTransitGatewayMulticastDomainAssociationsInput, _a2 ...request.Option) (*ec2.RejectTransitGatewayMulticastDomainAssociationsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.RejectTransitGatewayMulticastDomainAssociationsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.RejectTransitGatewayMulticastDomainAssociationsInput, ...request.Option) *ec2.RejectTransitGatewayMulticastDomainAssociationsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.RejectTransitGatewayMulticastDomainAssociationsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.RejectTransitGatewayMulticastDomainAssociationsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // RejectTransitGatewayPeeringAttachment provides a mock function with given fields: _a0
 func (_m *EC2API) RejectTransitGatewayPeeringAttachment(_a0 *ec2.RejectTransitGatewayPeeringAttachmentInput) (*ec2.RejectTransitGatewayPeeringAttachmentOutput, error) {
 	ret := _m.Called(_a0)
@@ -33700,6 +36051,84 @@ func (_m *EC2API) RequestSpotInstancesWithContext(_a0 context.Context, _a1 *ec2.
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.RequestSpotInstancesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ResetAddressAttribute provides a mock function with given fields: _a0
+func (_m *EC2API) ResetAddressAttribute(_a0 *ec2.ResetAddressAttributeInput) (*ec2.ResetAddressAttributeOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.ResetAddressAttributeOutput
+	if rf, ok := ret.Get(0).(func(*ec2.ResetAddressAttributeInput) *ec2.ResetAddressAttributeOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.ResetAddressAttributeOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.ResetAddressAttributeInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ResetAddressAttributeRequest provides a mock function with given fields: _a0
+func (_m *EC2API) ResetAddressAttributeRequest(_a0 *ec2.ResetAddressAttributeInput) (*request.Request, *ec2.ResetAddressAttributeOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.ResetAddressAttributeInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.ResetAddressAttributeOutput
+	if rf, ok := ret.Get(1).(func(*ec2.ResetAddressAttributeInput) *ec2.ResetAddressAttributeOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.ResetAddressAttributeOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ResetAddressAttributeWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) ResetAddressAttributeWithContext(_a0 context.Context, _a1 *ec2.ResetAddressAttributeInput, _a2 ...request.Option) (*ec2.ResetAddressAttributeOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.ResetAddressAttributeOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.ResetAddressAttributeInput, ...request.Option) *ec2.ResetAddressAttributeOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.ResetAddressAttributeOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.ResetAddressAttributeInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -35174,6 +37603,84 @@ func (_m *EC2API) StartInstancesWithContext(_a0 context.Context, _a1 *ec2.StartI
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *ec2.StartInstancesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StartNetworkInsightsAnalysis provides a mock function with given fields: _a0
+func (_m *EC2API) StartNetworkInsightsAnalysis(_a0 *ec2.StartNetworkInsightsAnalysisInput) (*ec2.StartNetworkInsightsAnalysisOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ec2.StartNetworkInsightsAnalysisOutput
+	if rf, ok := ret.Get(0).(func(*ec2.StartNetworkInsightsAnalysisInput) *ec2.StartNetworkInsightsAnalysisOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.StartNetworkInsightsAnalysisOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ec2.StartNetworkInsightsAnalysisInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StartNetworkInsightsAnalysisRequest provides a mock function with given fields: _a0
+func (_m *EC2API) StartNetworkInsightsAnalysisRequest(_a0 *ec2.StartNetworkInsightsAnalysisInput) (*request.Request, *ec2.StartNetworkInsightsAnalysisOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ec2.StartNetworkInsightsAnalysisInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ec2.StartNetworkInsightsAnalysisOutput
+	if rf, ok := ret.Get(1).(func(*ec2.StartNetworkInsightsAnalysisInput) *ec2.StartNetworkInsightsAnalysisOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ec2.StartNetworkInsightsAnalysisOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// StartNetworkInsightsAnalysisWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EC2API) StartNetworkInsightsAnalysisWithContext(_a0 context.Context, _a1 *ec2.StartNetworkInsightsAnalysisInput, _a2 ...request.Option) (*ec2.StartNetworkInsightsAnalysisOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ec2.StartNetworkInsightsAnalysisOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *ec2.StartNetworkInsightsAnalysisInput, ...request.Option) *ec2.StartNetworkInsightsAnalysisOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ec2.StartNetworkInsightsAnalysisOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *ec2.StartNetworkInsightsAnalysisInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)

@@ -1,31 +1,39 @@
 package eks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/weaveworks/eksctl/pkg/cfn/waiter"
+
+	"github.com/weaveworks/eksctl/pkg/cfn/manager"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/kris-nova/logger"
 	"github.com/pkg/errors"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	awseks "github.com/aws/aws-sdk-go/service/eks"
 
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/fargate"
 	iamoidc "github.com/weaveworks/eksctl/pkg/iam/oidc"
-	"github.com/weaveworks/eksctl/pkg/printers"
 	"github.com/weaveworks/eksctl/pkg/utils"
 	"github.com/weaveworks/eksctl/pkg/vpc"
+)
+
+const (
+	eksctlCreatedTrue    api.EKSCTLCreated = "True"
+	eksctlCreatedFalse   api.EKSCTLCreated = "False"
+	eksctlCreatedUnknown api.EKSCTLCreated = "Unknown"
 )
 
 // DescribeControlPlane describes the cluster control plane
@@ -41,7 +49,7 @@ func (c *ClusterProvider) DescribeControlPlane(meta *api.ClusterMeta) (*awseks.C
 }
 
 // RefreshClusterStatus calls c.DescribeControlPlane and caches the results;
-// it parses the credentials (endpoint, CA certificate) and stores them in spec.Status,
+// it parses the credentials (endpoint, CA certificate) and stores them in ClusterConfig.Status,
 // so that a Kubernetes client can be constructed; additionally it caches Kubernetes
 // version (use ctl.ControlPlaneVersion to retrieve it) and other properties in
 // c.Status.cachedClusterInfo
@@ -80,7 +88,7 @@ func (c *ClusterProvider) SupportsManagedNodes(clusterConfig *api.ClusterConfig)
 		return false, err
 	}
 
-	return ClusterSupportsManagedNodes(c.Status.clusterInfo.cluster)
+	return ClusterSupportsManagedNodes(c.Status.ClusterInfo.Cluster)
 }
 
 // ClusterSupportsManagedNodes reports whether the EKS cluster supports managed nodes
@@ -119,7 +127,7 @@ func (c *ClusterProvider) SupportsFargate(clusterConfig *api.ClusterConfig) (boo
 	if err := c.maybeRefreshClusterStatus(clusterConfig); err != nil {
 		return false, err
 	}
-	return ClusterSupportsFargate(c.Status.clusterInfo.cluster)
+	return ClusterSupportsFargate(c.Status.ClusterInfo.Cluster)
 }
 
 // ClusterSupportsFargate reports whether an existing cluster supports Fargate.
@@ -194,10 +202,10 @@ func (c *ClusterProvider) CanDelete(spec *api.ClusterConfig) (bool, error) {
 func (c *ClusterProvider) CanOperate(spec *api.ClusterConfig) (bool, error) {
 	err := c.maybeRefreshClusterStatus(spec)
 	if err != nil {
-		return false, errors.Wrapf(err, "fetching cluster status to determine operability")
+		return false, errors.Wrapf(err, "unable to fetch cluster status to determine operability")
 	}
 
-	switch status := *c.Status.clusterInfo.cluster.Status; status {
+	switch status := *c.Status.ClusterInfo.Cluster.Status; status {
 	case awseks.ClusterStatusCreating, awseks.ClusterStatusDeleting, awseks.ClusterStatusFailed:
 		return false, fmt.Errorf("cannot perform Kubernetes API operations on cluster %q in %q region due to status %q", spec.Metadata.Name, spec.Metadata.Region, status)
 	default:
@@ -212,7 +220,7 @@ func (c *ClusterProvider) CanUpdate(spec *api.ClusterConfig) (bool, error) {
 		return false, errors.Wrapf(err, "fetching cluster status to determine update status")
 	}
 
-	switch status := *c.Status.clusterInfo.cluster.Status; status {
+	switch status := *c.Status.ClusterInfo.Cluster.Status; status {
 	case awseks.ClusterStatusActive:
 		// only active cluster can be upgraded
 		return true, nil
@@ -223,10 +231,18 @@ func (c *ClusterProvider) CanUpdate(spec *api.ClusterConfig) (bool, error) {
 
 // ControlPlaneVersion returns cached version (EKS API)
 func (c *ClusterProvider) ControlPlaneVersion() string {
-	if c.Status.clusterInfo.cluster == nil || c.Status.clusterInfo.cluster.Version == nil {
+	if c.Status.ClusterInfo == nil || c.Status.ClusterInfo.Cluster == nil || c.Status.ClusterInfo.Cluster.Version == nil {
 		return ""
 	}
-	return *c.Status.clusterInfo.cluster.Version
+	return *c.Status.ClusterInfo.Cluster.Version
+}
+
+// ControlPlaneVPCInfo returns cached version (EKS API)
+func (c *ClusterProvider) ControlPlaneVPCInfo() awseks.VpcConfigResponse {
+	if c.Status.ClusterInfo == nil || c.Status.ClusterInfo.Cluster == nil || c.Status.ClusterInfo.Cluster.ResourcesVpcConfig == nil {
+		return awseks.VpcConfigResponse{}
+	}
+	return *c.Status.ClusterInfo.Cluster.ResourcesVpcConfig
 }
 
 // UnsupportedOIDCError represents an unsupported OIDC error
@@ -244,7 +260,7 @@ func (c *ClusterProvider) NewOpenIDConnectManager(spec *api.ClusterConfig) (*iam
 		return nil, err
 	}
 
-	if c.Status.clusterInfo.cluster == nil || c.Status.clusterInfo.cluster.Identity == nil || c.Status.clusterInfo.cluster.Identity.Oidc == nil || c.Status.clusterInfo.cluster.Identity.Oidc.Issuer == nil {
+	if c.Status.ClusterInfo.Cluster == nil || c.Status.ClusterInfo.Cluster.Identity == nil || c.Status.ClusterInfo.Cluster.Identity.Oidc == nil || c.Status.ClusterInfo.Cluster.Identity.Oidc.Issuer == nil {
 		return nil, &UnsupportedOIDCError{"unknown OIDC issuer URL"}
 	}
 
@@ -258,13 +274,14 @@ func (c *ClusterProvider) NewOpenIDConnectManager(spec *api.ClusterConfig) (*iam
 		return nil, fmt.Errorf("unknown EKS ARN: %q", spec.Status.ARN)
 	}
 
-	return iamoidc.NewOpenIDConnectManager(c.Provider.IAM(), parsedARN.AccountID, *c.Status.clusterInfo.cluster.Identity.Oidc.Issuer, parsedARN.Partition)
+	return iamoidc.NewOpenIDConnectManager(c.Provider.IAM(), parsedARN.AccountID, *c.Status.ClusterInfo.Cluster.Identity.Oidc.Issuer, parsedARN.Partition)
 }
 
-// LoadClusterIntoSpec loads the cluster configuration into the spec
+// LoadClusterIntoSpecFromStack uses stack information to load the cluster
+// configuration into the spec
 // At the moment VPC and KubernetesNetworkConfig are respected
-func (c *ClusterProvider) LoadClusterIntoSpec(spec *api.ClusterConfig) error {
-	if err := c.LoadClusterVPC(spec); err != nil {
+func (c *ClusterProvider) LoadClusterIntoSpecFromStack(spec *api.ClusterConfig, stackManager manager.StackManager) error {
+	if err := c.LoadClusterVPC(spec, stackManager); err != nil {
 		return err
 	}
 	if err := c.RefreshClusterStatus(spec); err != nil {
@@ -277,13 +294,16 @@ func (c *ClusterProvider) LoadClusterIntoSpec(spec *api.ClusterConfig) error {
 }
 
 // LoadClusterVPC loads the VPC configuration
-func (c *ClusterProvider) LoadClusterVPC(spec *api.ClusterConfig) error {
-	stack, err := c.NewStackManager(spec).DescribeClusterStack()
+func (c *ClusterProvider) LoadClusterVPC(spec *api.ClusterConfig, stackManager manager.StackManager) error {
+	stack, err := stackManager.DescribeClusterStack()
 	if err != nil {
 		return err
 	}
+	if stack == nil {
+		return &manager.StackNotFoundErr{ClusterName: spec.Metadata.Name}
+	}
 
-	return vpc.UseFromCluster(c.Provider, stack, spec)
+	return vpc.UseFromClusterStack(c.Provider, stack, spec)
 }
 
 // loadClusterKubernetesNetworkConfig gets the network config of an existing
@@ -292,7 +312,7 @@ func (c *ClusterProvider) loadClusterKubernetesNetworkConfig(spec *api.ClusterCo
 	if spec.Status == nil {
 		return errors.New("cluster hasn't been refreshed")
 	}
-	knCfg := c.Status.clusterInfo.cluster.KubernetesNetworkConfig
+	knCfg := c.Status.ClusterInfo.Cluster.KubernetesNetworkConfig
 	if knCfg != nil {
 		spec.KubernetesNetworkConfig = &api.KubernetesNetworkConfig{
 			ServiceIPv4CIDR: aws.StringValue(knCfg.ServiceIpv4Cidr),
@@ -301,31 +321,114 @@ func (c *ClusterProvider) loadClusterKubernetesNetworkConfig(spec *api.ClusterCo
 	return nil
 }
 
-// ListClusters display details of all the EKS cluster in your account
-func (c *ClusterProvider) ListClusters(clusterName string, chunkSize int, output printers.Type, eachRegion bool) error {
-	// NOTE: this needs to be reworked in the future so that the functionality
-	// is combined. This require the ability to return details of all clusters
-	// in a single call.
-	printer, err := printers.NewPrinter(output)
-	if err != nil {
-		return err
-	}
-
-	if clusterName != "" {
-		if output == "table" {
-			addSummaryTableColumns(printer.(*printers.TablePrinter))
+// ListClusters returns a list of the EKS cluster in your account
+func (c *ClusterProvider) ListClusters(chunkSize int, listAllRegions bool) ([]*api.ClusterConfig, error) {
+	if listAllRegions {
+		var clusters []*api.ClusterConfig
+		// reset region and re-create the client, then make a recursive call
+		authorizedRegions, err := c.Provider.EC2().DescribeRegions(&ec2.DescribeRegionsInput{})
+		if err != nil {
+			return nil, err
 		}
-		return c.doGetCluster(clusterName, printer)
+
+		for _, region := range authorizedRegions.Regions {
+			spec := &api.ProviderConfig{
+				Region:      *region.RegionName,
+				Profile:     c.Provider.Profile(),
+				WaitTimeout: c.Provider.WaitTimeout(),
+			}
+
+			ctl, err := New(spec, nil)
+			if err != nil {
+				logger.Critical("error creating provider in %q region: %s", region, err.Error())
+				continue
+			}
+
+			newClusters, err := ctl.listClusters(int64(chunkSize))
+			if err != nil {
+				logger.Critical("error listing clusters in %q region: %s", region, err.Error())
+			}
+
+			clusters = append(clusters, newClusters...)
+		}
+		return clusters, nil
 	}
 
-	if output == "table" {
-		addListTableColumns(printer.(*printers.TablePrinter))
+	return c.listClusters(int64(chunkSize))
+}
+
+func (c *ClusterProvider) listClusters(chunkSize int64) ([]*api.ClusterConfig, error) {
+	allClusters := []*api.ClusterConfig{}
+
+	spec := &api.ClusterConfig{Metadata: &api.ClusterMeta{Name: ""}}
+	allStacks, err := c.NewStackManager(spec).ListClusterStackNames()
+	if err != nil {
+		return nil, err
 	}
-	allClusters := []*api.ClusterMeta{}
-	if err := c.doListClusters(int64(chunkSize), printer, &allClusters, eachRegion); err != nil {
-		return err
+
+	token := ""
+	for {
+		clusters, nextToken, err := c.getClustersRequest(chunkSize, token)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, clusterName := range clusters {
+			spec := &api.ClusterConfig{Metadata: &api.ClusterMeta{Name: *clusterName}}
+			hasClusterStack, err := c.NewStackManager(spec).HasClusterStackUsingCachedList(allStacks)
+			managed := eksctlCreatedFalse
+			if err != nil {
+				managed = eksctlCreatedUnknown
+				logger.Warning("error fetching stacks for cluster %s: %v", clusterName, err)
+			} else if hasClusterStack {
+				managed = eksctlCreatedTrue
+			}
+			allClusters = append(allClusters, &api.ClusterConfig{
+				Metadata: &api.ClusterMeta{
+					Name:   *clusterName,
+					Region: c.Provider.Region(),
+				},
+				Status: &api.ClusterStatus{
+					EKSCTLCreated: managed,
+				},
+			})
+		}
+
+		if api.IsSetAndNonEmptyString(nextToken) {
+			token = *nextToken
+		} else {
+			break
+		}
 	}
-	return printer.PrintObjWithKind("clusters", allClusters, os.Stdout)
+
+	return allClusters, nil
+}
+
+// GetCluster display details of an EKS cluster in your account
+func (c *ClusterProvider) GetCluster(clusterName string) (*awseks.Cluster, error) {
+	input := &awseks.DescribeClusterInput{
+		Name: &clusterName,
+	}
+
+	output, err := c.Provider.EKS().DescribeCluster(input)
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to describe control plane %q", clusterName)
+	}
+	logger.Debug("cluster = %#v", output)
+
+	if *output.Cluster.Status == awseks.ClusterStatusActive {
+		if logger.Level >= 4 {
+			spec := &api.ClusterConfig{Metadata: &api.ClusterMeta{Name: clusterName}}
+			stacks, err := c.NewStackManager(spec).ListStacks()
+			if err != nil {
+				return nil, errors.Wrapf(err, "listing CloudFormation stack for %q", clusterName)
+			}
+			for _, s := range stacks {
+				logger.Debug("stack = %#v", *s)
+			}
+		}
+	}
+	return output.Cluster, nil
 }
 
 func (c *ClusterProvider) getClustersRequest(chunkSize int64, nextToken string) ([]*string, *string, error) {
@@ -340,143 +443,33 @@ func (c *ClusterProvider) getClustersRequest(chunkSize int64, nextToken string) 
 	return output.Clusters, output.NextToken, nil
 }
 
-func (c *ClusterProvider) doListClusters(chunkSize int64, printer printers.OutputPrinter, allClusters *[]*api.ClusterMeta, eachRegion bool) error {
-	if eachRegion {
-		// reset region and re-create the client, then make a recursive call
-		for _, region := range api.SupportedRegions() {
-			spec := &api.ProviderConfig{
-				Region:      region,
-				Profile:     c.Provider.Profile(),
-				WaitTimeout: c.Provider.WaitTimeout(),
-			}
-			if err := New(spec, nil).doListClusters(chunkSize, printer, allClusters, false); err != nil {
-				logger.Critical("error listing clusters in %q region: %s", region, err.Error())
-			}
-		}
-		return nil
-	}
-
-	token := ""
-	for {
-		clusters, nextToken, err := c.getClustersRequest(chunkSize, token)
-		if err != nil {
-			return err
-		}
-
-		for _, clusterName := range clusters {
-			*allClusters = append(*allClusters, &api.ClusterMeta{
-				Name:   *clusterName,
-				Region: c.Provider.Region(),
-			})
-		}
-
-		if api.IsSetAndNonEmptyString(nextToken) {
-			token = *nextToken
-		} else {
-			break
-		}
-	}
-
-	return nil
-}
-
-func (c *ClusterProvider) doGetCluster(clusterName string, printer printers.OutputPrinter) error {
-	input := &awseks.DescribeClusterInput{
-		Name: &clusterName,
-	}
-	output, err := c.Provider.EKS().DescribeCluster(input)
-	if err != nil {
-		return errors.Wrapf(err, "unable to describe control plane %q", clusterName)
-	}
-	logger.Debug("cluster = %#v", output)
-
-	clusters := []*awseks.Cluster{output.Cluster} // TODO: in the future this will have multiple clusters
-	if err := printer.PrintObjWithKind("clusters", clusters, os.Stdout); err != nil {
-		return err
-	}
-
-	if *output.Cluster.Status == awseks.ClusterStatusActive {
-		if logger.Level >= 4 {
-			spec := &api.ClusterConfig{Metadata: &api.ClusterMeta{Name: clusterName}}
-			stacks, err := c.NewStackManager(spec).ListStacks()
-			if err != nil {
-				return errors.Wrapf(err, "listing CloudFormation stack for %q", clusterName)
-			}
-			for _, s := range stacks {
-				logger.Debug("stack = %#v", *s)
-			}
-		}
-	}
-	return nil
-}
-
 // WaitForControlPlane waits till the control plane is ready
 func (c *ClusterProvider) WaitForControlPlane(meta *api.ClusterMeta, clientSet *kubernetes.Clientset) error {
 	if _, err := clientSet.ServerVersion(); err == nil {
 		return nil
 	}
 
-	ticker := time.NewTicker(20 * time.Second)
-	defer ticker.Stop()
-
-	timer := time.NewTimer(c.Provider.WaitTimeout())
-	defer timer.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			_, err := clientSet.ServerVersion()
-			if err == nil {
-				return nil
-			}
-			logger.Debug("control plane not ready yet – %s", err.Error())
-		case <-timer.C:
-			return fmt.Errorf("timed out waiting for control plane %q after %s", meta.Name, c.Provider.WaitTimeout())
+	operation := func() (bool, error) {
+		_, err := clientSet.ServerVersion()
+		if err == nil {
+			return true, nil
 		}
+		logger.Debug("control plane not ready yet – %s", err.Error())
+		return false, nil
 	}
-}
 
-func addSummaryTableColumns(printer *printers.TablePrinter) {
-	printer.AddColumn("NAME", func(c *awseks.Cluster) string {
-		return *c.Name
-	})
-	printer.AddColumn("VERSION", func(c *awseks.Cluster) string {
-		return *c.Version
-	})
-	printer.AddColumn("STATUS", func(c *awseks.Cluster) string {
-		return *c.Status
-	})
-	printer.AddColumn("CREATED", func(c *awseks.Cluster) string {
-		return c.CreatedAt.Format(time.RFC3339)
-	})
-	printer.AddColumn("VPC", func(c *awseks.Cluster) string {
-		return *c.ResourcesVpcConfig.VpcId
-	})
-	printer.AddColumn("SUBNETS", func(c *awseks.Cluster) string {
-		subnets := sets.NewString()
-		for _, subnetid := range c.ResourcesVpcConfig.SubnetIds {
-			if api.IsSetAndNonEmptyString(subnetid) {
-				subnets.Insert(*subnetid)
-			}
-		}
-		return strings.Join(subnets.List(), ",")
-	})
-	printer.AddColumn("SECURITYGROUPS", func(c *awseks.Cluster) string {
-		groups := sets.NewString()
-		for _, sg := range c.ResourcesVpcConfig.SecurityGroupIds {
-			if api.IsSetAndNonEmptyString(sg) {
-				groups.Insert(*sg)
-			}
-		}
-		return strings.Join(groups.List(), ",")
-	})
-}
+	w := waiter.Waiter{
+		Operation: operation,
+		NextDelay: func(_ int) time.Duration {
+			return 20 * time.Second
+		},
+	}
 
-func addListTableColumns(printer *printers.TablePrinter) {
-	printer.AddColumn("NAME", func(c *api.ClusterMeta) string {
-		return c.Name
-	})
-	printer.AddColumn("REGION", func(c *api.ClusterMeta) string {
-		return c.Region
-	})
+	if err := w.WaitWithTimeout(c.Provider.WaitTimeout()); err != nil {
+		if err == context.DeadlineExceeded {
+			return errors.Errorf("timed out waiting for control plane %q after %s", meta.Name, c.Provider.WaitTimeout())
+		}
+		return err
+	}
+	return nil
 }

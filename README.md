@@ -1,6 +1,6 @@
 # `eksctl` - The official CLI for Amazon EKS
 
-[![Circle CI](https://circleci.com/gh/weaveworks/eksctl/tree/master.svg?style=shield)](https://circleci.com/gh/weaveworks/eksctl/tree/master) [![Coverage Status](https://coveralls.io/repos/github/weaveworks/eksctl/badge.svg?branch=master)](https://coveralls.io/github/weaveworks/eksctl?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/weaveworks/eksctl)](https://goreportcard.com/report/github.com/weaveworks/eksctl)
+[![Circle CI](https://circleci.com/gh/weaveworks/eksctl/tree/main.svg?style=shield)](https://circleci.com/gh/weaveworks/eksctl/tree/main) [![Coverage Status](https://coveralls.io/repos/github/weaveworks/eksctl/badge.svg?branch=main)](https://coveralls.io/github/weaveworks/eksctl?branch=main) [![Go Report Card](https://goreportcard.com/badge/github.com/weaveworks/eksctl)](https://goreportcard.com/report/github.com/weaveworks/eksctl)
 
 `eksctl` is a simple CLI tool for creating clusters on EKS - Amazon's new managed Kubernetes service for EC2. It is written in Go, and uses CloudFormation.
 
@@ -16,6 +16,13 @@ To download the latest release, run:
 
 ```
 curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+sudo mv /tmp/eksctl /usr/local/bin
+```
+
+For ARM system, please change ARCH (e.g. armv6, armv7 or arm64) accordingly
+
+```
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_arm64.tar.gz" | tar xz -C /tmp
 sudo mv /tmp/eksctl /usr/local/bin
 ```
 
@@ -65,7 +72,6 @@ A cluster will be created with default parameters
 - use official AWS EKS AMI
 - `us-west-2` region
 - dedicated VPC (check your quotas)
-- using static AMI resolver
 
 Once you have created a cluster, you will find that cluster credentials were added in `~/.kube/config`. If you have `kubectl` v1.10.x as well as `aws-iam-authenticator` commands in your PATH, you should be
 able to use `kubectl`. You will need to make sure to use the same AWS API credentials for this also. Check [EKS docs][ekskubectl] for instructions. If you installed `eksctl` via Homebrew, you should have all of these dependencies installed already.
@@ -117,6 +123,8 @@ To learn more about what `eksctl` can do check [eksctl.io](https://eksctl.io). A
 
 Code contributions are very welcome. If you are interested in helping make `eksctl` great then see our [contributing guide](CONTRIBUTING.md).
 Or join the discussion on our [mailing list][maillist].
+
+We follow the [CNCF Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Releases
 

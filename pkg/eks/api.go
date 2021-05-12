@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/cloudtrail"
@@ -57,6 +59,7 @@ type ClusterProvider struct {
 type ProviderServices struct {
 	spec  *api.ProviderConfig
 	cfn   cloudformationiface.CloudFormationAPI
+	asg   autoscalingiface.AutoScalingAPI
 	eks   eksiface.EKSAPI
 	ec2   ec2iface.EC2API
 	elb   elbiface.ELBAPI
@@ -66,13 +69,23 @@ type ProviderServices struct {
 	iam   iamiface.IAMAPI
 
 	cloudtrail cloudtrailiface.CloudTrailAPI
+
+	session *session.Session
 }
 
 // CloudFormation returns a representation of the CloudFormation API
 func (p ProviderServices) CloudFormation() cloudformationiface.CloudFormationAPI { return p.cfn }
 
-// CloudFormationRoleARN returns, if any,  a service role used by CloudFormation to call AWS API on your behalf
+// CloudFormationRoleARN returns, if any, a service role used by CloudFormation to call AWS API on your behalf
 func (p ProviderServices) CloudFormationRoleARN() string { return p.spec.CloudFormationRoleARN }
+
+// CloudFormationDisableRollback returns whether stacks should not rollback on failure
+func (p ProviderServices) CloudFormationDisableRollback() bool {
+	return p.spec.CloudFormationDisableRollback
+}
+
+// ASG returns a representation of the AutoScaling API
+func (p ProviderServices) ASG() autoscalingiface.AutoScalingAPI { return p.asg }
 
 // EKS returns a representation of the EKS API
 func (p ProviderServices) EKS() eksiface.EKSAPI { return p.eks }
@@ -107,15 +120,23 @@ func (p ProviderServices) Profile() string { return p.spec.Profile }
 // WaitTimeout returns provider-level duration after which any wait operation has to timeout
 func (p ProviderServices) WaitTimeout() time.Duration { return p.spec.WaitTimeout }
 
+func (p ProviderServices) ConfigProvider() client.ConfigProvider {
+	return p.session
+}
+
+func (p ProviderServices) Session() *session.Session {
+	return p.session
+}
+
 // ProviderStatus stores information about the used IAM role and the resulting session
 type ProviderStatus struct {
 	iamRoleARN   string
 	sessionCreds *credentials.Credentials
-	clusterInfo  *clusterInfo
+	ClusterInfo  *ClusterInfo
 }
 
 // New creates a new setup of the used AWS APIs
-func New(spec *api.ProviderConfig, clusterSpec *api.ClusterConfig) *ClusterProvider {
+func New(spec *api.ProviderConfig, clusterSpec *api.ClusterConfig) (*ClusterProvider, error) {
 	provider := &ProviderServices{
 		spec: spec,
 	}
@@ -126,6 +147,8 @@ func New(spec *api.ProviderConfig, clusterSpec *api.ClusterConfig) *ClusterProvi
 	// later re-use if overriding sessions due to custom URL
 	s := c.newSession(spec)
 
+	provider.session = s
+	provider.asg = autoscaling.New(s)
 	provider.cfn = cloudformation.New(s)
 	provider.eks = awseks.New(s)
 	provider.ec2 = ec2.New(s)
@@ -189,7 +212,30 @@ func New(spec *api.ProviderConfig, clusterSpec *api.ClusterConfig) *ClusterProvi
 		clusterSpec.Metadata.Region = c.Provider.Region()
 	}
 
-	return c
+	return c, c.checkAuth()
+}
+
+// ParseConfig parses data into a ClusterConfig
+func ParseConfig(data []byte) (*api.ClusterConfig, error) {
+	// strict mode is not available in runtime.Decode, so we use the parser
+	// directly; we don't store the resulting object, this is just the means
+	// of detecting any unknown keys
+	// NOTE: we must use sigs.k8s.io/yaml, as it behaves differently from
+	// github.com/ghodss/yaml, which didn't handle nested structs well
+	if err := yaml.UnmarshalStrict(data, &api.ClusterConfig{}); err != nil {
+		return nil, err
+	}
+
+	obj, err := runtime.Decode(scheme.Codecs.UniversalDeserializer(), data)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, ok := obj.(*api.ClusterConfig)
+	if !ok {
+		return nil, fmt.Errorf("expected to decode object of type %T; got %T", &api.ClusterConfig{}, cfg)
+	}
+	return cfg, nil
 }
 
 // LoadConfigFromFile loads ClusterConfig from configFile
@@ -198,26 +244,12 @@ func LoadConfigFromFile(configFile string) (*api.ClusterConfig, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading config file %q", configFile)
 	}
-
-	// strict mode is not available in runtime.Decode, so we use the parser
-	// directly; we don't store the resulting object, this is just the means
-	// of detecting any unknown keys
-	// NOTE: we must use sigs.k8s.io/yaml, as it behaves differently from
-	// github.com/ghodss/yaml, which didn't handle nested structs well
-	if err := yaml.UnmarshalStrict(data, &api.ClusterConfig{}); err != nil {
-		return nil, errors.Wrapf(err, "loading config file %q", configFile)
-	}
-
-	obj, err := runtime.Decode(scheme.Codecs.UniversalDeserializer(), data)
+	clusterConfig, err := ParseConfig(data)
 	if err != nil {
 		return nil, errors.Wrapf(err, "loading config file %q", configFile)
 	}
+	return clusterConfig, nil
 
-	cfg, ok := obj.(*api.ClusterConfig)
-	if !ok {
-		return nil, fmt.Errorf("expected to decode object of type %T; got %T", &api.ClusterConfig{}, cfg)
-	}
-	return cfg, nil
 }
 
 func readConfig(configFile string) ([]byte, error) {
@@ -250,8 +282,8 @@ func (c *ClusterProvider) GetCredentialsEnv() ([]string, error) {
 	}, nil
 }
 
-// CheckAuth checks the AWS authentication
-func (c *ClusterProvider) CheckAuth() error {
+// checkAuth checks the AWS authentication
+func (c *ClusterProvider) checkAuth() error {
 
 	input := &sts.GetCallerIdentityInput{}
 	output, err := c.Provider.STS().GetCallerIdentity(input)
@@ -274,14 +306,13 @@ func ResolveAMI(provider api.ClusterProvider, version string, ng *api.NodeGroup)
 		resolver = ami.NewAutoResolver(provider.EC2())
 	case api.NodeImageResolverAutoSSM:
 		resolver = ami.NewSSMResolver(provider.SSM())
-	case api.NodeImageResolverStatic:
-		logger.Warning("'static' value for node-ami flag (nodeGroup.ami field) is deprecated and will be removed with release 0.33.0. Valid values will be 'auto-ssm' (default), 'auto' or an AMI id (advanced use)")
-		resolver = ami.NewStaticResolver()
-	default:
+	case "":
 		resolver = ami.NewMultiResolver(
 			ami.NewSSMResolver(provider.SSM()),
 			ami.NewAutoResolver(provider.EC2()),
 		)
+	default:
+		return errors.Errorf("invalid AMI value: %q", ng.AMI)
 	}
 
 	instanceType := selectInstanceType(ng)
@@ -349,7 +380,7 @@ func (c *ClusterProvider) SetAvailabilityZones(spec *api.ClusterConfig, given []
 }
 
 func (c *ClusterProvider) newSession(spec *api.ProviderConfig) *session.Session {
-	// we might want to use bits from kops, although right now it seems like too many thing we
+	// we might want to use bits from kops, although right now it seems like too many things we
 	// don't want yet
 	// https://github.com/kubernetes/kops/blob/master/upup/pkg/fi/cloudup/awsup/aws_cloud.go#L179
 	config := aws.NewConfig().WithCredentialsChainVerboseErrors(true)
@@ -404,6 +435,6 @@ func (c *ClusterProvider) newSession(spec *api.ProviderConfig) *session.Session 
 }
 
 // NewStackManager returns a new stack manager
-func (c *ClusterProvider) NewStackManager(spec *api.ClusterConfig) *manager.StackCollection {
+func (c *ClusterProvider) NewStackManager(spec *api.ClusterConfig) manager.StackManager {
 	return manager.NewStackCollection(c.Provider, spec)
 }

@@ -3,6 +3,9 @@ package builder
 import (
 	"fmt"
 
+	"github.com/kris-nova/logger"
+	"github.com/weaveworks/eksctl/pkg/iam"
+
 	cfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	gfniam "github.com/weaveworks/goformation/v4/cloudformation/iam"
 	gfnt "github.com/weaveworks/goformation/v4/cloudformation/types"
@@ -10,7 +13,6 @@ import (
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/cfn/outputs"
 	cft "github.com/weaveworks/eksctl/pkg/cfn/template"
-	"github.com/weaveworks/eksctl/pkg/iam"
 	iamoidc "github.com/weaveworks/eksctl/pkg/iam/oidc"
 )
 
@@ -23,6 +25,7 @@ const (
 	iamPolicyAmazonEC2ContainerRegistryPowerUser = "AmazonEC2ContainerRegistryPowerUser"
 	iamPolicyAmazonEC2ContainerRegistryReadOnly  = "AmazonEC2ContainerRegistryReadOnly"
 	iamPolicyCloudWatchAgentServerPolicy         = "CloudWatchAgentServerPolicy"
+	iamPolicyAmazonSSMManagedInstanceCore        = "AmazonSSMManagedInstanceCore"
 
 	iamPolicyAmazonEKSFargatePodExecutionRolePolicy = "AmazonEKSFargatePodExecutionRolePolicy"
 )
@@ -38,15 +41,11 @@ var (
 	}
 )
 
-func (c *resourceSet) attachAllowPolicy(name string, refRole *gfnt.Value, resources interface{}, actions []string) {
+func (c *resourceSet) attachAllowPolicy(name string, refRole *gfnt.Value, statements []cft.MapOfInterfaces) {
 	c.newResource(name, &gfniam.Policy{
-		PolicyName: makeName(name),
-		Roles:      gfnt.NewSlice(refRole),
-		PolicyDocument: cft.MakePolicyDocument(map[string]interface{}{
-			"Effect":   "Allow",
-			"Resource": resources,
-			"Action":   actions,
-		}),
+		PolicyName:     makeName(name),
+		Roles:          gfnt.NewSlice(refRole),
+		PolicyDocument: cft.MakePolicyDocument(statements...),
 	})
 }
 
@@ -81,9 +80,6 @@ func (c *ClusterResourceSet) addResourcesForIAM() {
 	role := &gfniam.Role{
 		AssumeRolePolicyDocument: cft.MakeAssumeRolePolicyDocumentForServices(
 			MakeServiceRef("EKS"),
-			// Ensure that EKS can schedule pods onto Fargate, should the user
-			// define so-called "Fargate profiles" in order to do so:
-			MakeServiceRef("EKSFargatePods"),
 		),
 		ManagedPolicyArns: gfnt.NewSlice(makePolicyARNs(managedPolicyArns...)...),
 	}
@@ -91,18 +87,12 @@ func (c *ClusterResourceSet) addResourcesForIAM() {
 		role.PermissionsBoundary = gfnt.NewString(*c.spec.IAM.ServiceRolePermissionsBoundary)
 	}
 	refSR := c.newResource("ServiceRole", role)
-	c.rs.attachAllowPolicy("PolicyCloudWatchMetrics", refSR, "*", []string{
-		"cloudwatch:PutMetricData",
-	})
+	c.rs.attachAllowPolicy("PolicyCloudWatchMetrics", refSR, cloudWatchMetricsStatements())
 	// These are potentially required for creating load balancers but aren't included in the
 	// AmazonEKSClusterPolicy
 	// See https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/elb-api-permissions.html#required-permissions-v2
 	// and weaveworks/eksctl#2488
-	c.rs.attachAllowPolicy("PolicyELBPermissions", refSR, "*", []string{
-		"ec2:DescribeAccountAttributes",
-		"ec2:DescribeAddresses",
-		"ec2:DescribeInternetGateways",
-	})
+	c.rs.attachAllowPolicy("PolicyELBPermissions", refSR, elbStatements())
 
 	c.rs.defineOutputFromAtt(outputs.ClusterServiceRoleARN, "ServiceRole", "Arn", true, func(v string) error {
 		c.spec.IAM.ServiceRoleARN = &v
@@ -135,7 +125,7 @@ func (n *NodeGroupResourceSet) addResourcesForIAM() error {
 		}
 		// if instance role is not given, export profile and use the getter to call importer function
 		n.rs.defineOutput(outputs.NodeGroupInstanceProfileARN, n.spec.IAM.InstanceProfileARN, true, func(v string) error {
-			return iam.ImportInstanceRoleFromProfileARN(n.provider, n.spec, v)
+			return iam.ImportInstanceRoleFromProfileARN(n.iamAPI, n.spec, v)
 		})
 
 		return nil
@@ -149,7 +139,7 @@ func (n *NodeGroupResourceSet) addResourcesForIAM() error {
 		// if role is set, but profile isn't - create profile
 		n.newResource(cfnIAMInstanceProfileName, &gfniam.InstanceProfile{
 			Path:  gfnt.NewString("/"),
-			Roles: gfnt.NewStringSlice(roleARN),
+			Roles: gfnt.NewStringSlice(AbstractRoleNameFromARN(roleARN)),
 		})
 		n.instanceProfileARN = gfnt.MakeFnGetAttString(cfnIAMInstanceProfileName, "Arn")
 		n.rs.defineOutputFromAtt(outputs.NodeGroupInstanceProfileARN, cfnIAMInstanceProfileName, "Arn", true, func(v string) error {
@@ -167,7 +157,8 @@ func (n *NodeGroupResourceSet) addResourcesForIAM() error {
 		n.rs.withNamedIAM = true
 	}
 
-	if err := createRole(n.rs, n.clusterSpec.IAM, n.spec.IAM, false); err != nil {
+	enableSSM := n.spec.SSH != nil && api.IsEnabled(n.spec.SSH.EnableSSM)
+	if err := createRole(n.rs, n.clusterSpec.IAM, n.spec.IAM, false, enableSSM, n.forceAddCNIPolicy); err != nil {
 		return err
 	}
 
@@ -188,75 +179,144 @@ func (n *NodeGroupResourceSet) addResourcesForIAM() error {
 	return nil
 }
 
-// IAMServiceAccountResourceSet holds iamserviceaccount stack build-time information
-type IAMServiceAccountResourceSet struct {
-	template *cft.Template
-	spec     *api.ClusterIAMServiceAccount
-	oidc     *iamoidc.OpenIDConnectManager
-	outputs  *outputs.CollectorSet
-}
-
-// NewIAMServiceAccountResourceSet builds iamserviceaccount stack from the give spec
-func NewIAMServiceAccountResourceSet(spec *api.ClusterIAMServiceAccount, oidc *iamoidc.OpenIDConnectManager) *IAMServiceAccountResourceSet {
-	return &IAMServiceAccountResourceSet{
-		template: cft.NewTemplate(),
-		spec:     spec,
-		oidc:     oidc,
-	}
-}
-
-// WithIAM returns true
-func (*IAMServiceAccountResourceSet) WithIAM() bool { return true }
-
-// WithNamedIAM returns false
-func (*IAMServiceAccountResourceSet) WithNamedIAM() bool { return false }
-
-// AddAllResources adds all resources for the stack
-func (rs *IAMServiceAccountResourceSet) AddAllResources() error {
-	rs.template.Description = fmt.Sprintf(
-		"IAM role for serviceaccount %q %s",
-		rs.spec.NameString(),
-		templateDescriptionSuffix,
-	)
-
-	// we use a single stack for each service account, but there maybe a few roles in it
-	// so will need to give them unique names
-	// we will need to consider using a large stack for all the roles, but that needs some
-	// testing and potentially a better stack mutation strategy
-	role := &cft.IAMRole{
-		AssumeRolePolicyDocument: rs.oidc.MakeAssumeRolePolicyDocument(rs.spec.Namespace, rs.spec.Name),
-		PermissionsBoundary:      rs.spec.PermissionsBoundary,
-	}
-	role.ManagedPolicyArns = append(role.ManagedPolicyArns, rs.spec.AttachPolicyARNs...)
-
-	roleRef := rs.template.NewResource("Role1", role)
-
-	// TODO: declare output collector automatically when all stack builders migrated to our template package
-	rs.template.Outputs["Role1"] = cft.Output{
-		Value: cft.MakeFnGetAttString("Role1.Arn"),
-	}
-	rs.outputs = outputs.NewCollectorSet(map[string]outputs.Collector{
-		"Role1": func(v string) error {
-			rs.spec.Status = &api.ClusterIAMServiceAccountStatus{
+func NewIAMRoleResourceSetForServiceAccount(spec *api.ClusterIAMServiceAccount, oidc *iamoidc.OpenIDConnectManager) *IAMRoleResourceSet {
+	return &IAMRoleResourceSet{
+		template:            cft.NewTemplate(),
+		attachPolicy:        spec.AttachPolicy,
+		attachPolicyARNs:    spec.AttachPolicyARNs,
+		serviceAccount:      spec.Name,
+		namespace:           spec.Namespace,
+		wellKnownPolicies:   spec.WellKnownPolicies,
+		roleName:            spec.RoleName,
+		permissionsBoundary: spec.PermissionsBoundary,
+		description: fmt.Sprintf(
+			"IAM role for serviceaccount %q %s",
+			spec.NameString(),
+			templateDescriptionSuffix,
+		),
+		oidc: oidc,
+		roleNameCollector: func(v string) error {
+			spec.Status = &api.ClusterIAMServiceAccountStatus{
 				RoleARN: &v,
 			}
 			return nil
 		},
+	}
+}
+
+// IAMRoleResourceSet holds IAM Role stack build-time information
+type IAMRoleResourceSet struct {
+	template            *cft.Template
+	oidc                *iamoidc.OpenIDConnectManager
+	outputs             *outputs.CollectorSet
+	roleName            string
+	wellKnownPolicies   api.WellKnownPolicies
+	attachPolicyARNs    []string
+	attachPolicy        api.InlineDocument
+	roleNameCollector   func(string) error
+	OutputRole          string
+	serviceAccount      string
+	namespace           string
+	permissionsBoundary string
+	description         string
+}
+
+// NewIAMRoleResourceSetWithAttachPolicyARNs builds IAM Role stack from the give spec
+func NewIAMRoleResourceSetWithAttachPolicyARNs(name, namespace, serviceAccount, permissionsBoundary string, attachPolicyARNs []string, oidc *iamoidc.OpenIDConnectManager) *IAMRoleResourceSet {
+	return newIAMRoleResourceSet(name, namespace, serviceAccount, permissionsBoundary, nil, attachPolicyARNs, oidc)
+
+}
+
+// NewIAMRoleResourceSetWithAttachPolicy builds IAM Role stack from the give spec
+func NewIAMRoleResourceSetWithAttachPolicy(name, namespace, serviceAccount, permissionsBoundary string, attachPolicy api.InlineDocument, oidc *iamoidc.OpenIDConnectManager) *IAMRoleResourceSet {
+	return newIAMRoleResourceSet(name, namespace, serviceAccount, permissionsBoundary, attachPolicy, nil, oidc)
+}
+
+// NewIAMRoleResourceSetForServiceAccount builds IAM Role stack from the give spec
+func newIAMRoleResourceSet(name, namespace, serviceAccount, permissionsBoundary string, attachPolicy api.InlineDocument, attachPolicyARNs []string, oidc *iamoidc.OpenIDConnectManager) *IAMRoleResourceSet {
+	rs := &IAMRoleResourceSet{
+		template:            cft.NewTemplate(),
+		attachPolicyARNs:    attachPolicyARNs,
+		attachPolicy:        attachPolicy,
+		oidc:                oidc,
+		serviceAccount:      serviceAccount,
+		namespace:           namespace,
+		permissionsBoundary: permissionsBoundary,
+		description: fmt.Sprintf(
+			"IAM role for %q %s",
+			name,
+			templateDescriptionSuffix,
+		),
+	}
+
+	rs.roleNameCollector = func(v string) error {
+		rs.OutputRole = v
+		return nil
+	}
+	return rs
+}
+
+// WithIAM returns true
+func (*IAMRoleResourceSet) WithIAM() bool { return true }
+
+// WithNamedIAM returns false
+func (rs *IAMRoleResourceSet) WithNamedIAM() bool { return rs.roleName != "" }
+
+// AddAllResources adds all resources for the stack
+func (rs *IAMRoleResourceSet) AddAllResources() error {
+	rs.template.Description = rs.description
+
+	var assumeRolePolicyDocument cft.MapOfInterfaces
+	if rs.serviceAccount != "" && rs.namespace != "" {
+		logger.Debug("service account location provided: %s/%s, adding sub condition", api.AWSNodeMeta.Namespace, api.AWSNodeMeta.Name)
+		assumeRolePolicyDocument = rs.oidc.MakeAssumeRolePolicyDocumentWithServiceAccountConditions(rs.namespace, rs.serviceAccount)
+	} else {
+		assumeRolePolicyDocument = rs.oidc.MakeAssumeRolePolicyDocument()
+	}
+
+	role := &cft.IAMRole{
+		AssumeRolePolicyDocument: assumeRolePolicyDocument,
+		PermissionsBoundary:      rs.permissionsBoundary,
+		RoleName:                 rs.roleName,
+	}
+
+	for _, arn := range rs.attachPolicyARNs {
+		role.ManagedPolicyArns = append(role.ManagedPolicyArns, arn)
+	}
+
+	managedPolicies, customPolicies := createWellKnownPolicies(rs.wellKnownPolicies)
+
+	for _, p := range managedPolicies {
+		role.ManagedPolicyArns = append(role.ManagedPolicyArns, makePolicyARN(p.name))
+	}
+
+	roleRef := rs.template.NewResource("Role1", role)
+
+	for _, p := range customPolicies {
+		doc := cft.MakePolicyDocument(p.Statements...)
+		rs.template.AttachPolicy(p.Name, roleRef, doc)
+	}
+
+	rs.template.Outputs["Role1"] = cft.Output{
+		Value: cft.MakeFnGetAttString("Role1.Arn"),
+	}
+	rs.outputs = outputs.NewCollectorSet(map[string]outputs.Collector{
+		"Role1": rs.roleNameCollector,
 	})
 
-	if len(rs.spec.AttachPolicy) != 0 {
-		rs.template.AttachPolicy("Policy1", roleRef, rs.spec.AttachPolicy)
+	if len(rs.attachPolicy) != 0 {
+		rs.template.AttachPolicy("Policy1", roleRef, rs.attachPolicy)
 	}
 
 	return nil
 }
 
 // RenderJSON will render iamserviceaccount stack as JSON
-func (rs *IAMServiceAccountResourceSet) RenderJSON() ([]byte, error) {
+func (rs *IAMRoleResourceSet) RenderJSON() ([]byte, error) {
 	return rs.template.RenderJSON()
 }
 
 // GetAllOutputs will get all outputs from iamserviceaccount stack
-func (rs *IAMServiceAccountResourceSet) GetAllOutputs(stack cfn.Stack) error {
+func (rs *IAMRoleResourceSet) GetAllOutputs(stack cfn.Stack) error {
 	return rs.outputs.MustCollect(stack)
 }

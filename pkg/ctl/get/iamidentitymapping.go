@@ -31,7 +31,7 @@ func getIAMIdentityMappingCmd(cmd *cmdutils.Cmd) {
 	}
 
 	cmd.FlagSetGroup.InFlagSet("General", func(fs *pflag.FlagSet) {
-		cmdutils.AddIAMIdentityMappingARNFlags(fs, cmd, &arn)
+		cmdutils.AddIAMIdentityMappingARNFlags(fs, cmd, &arn, "get")
 		cmdutils.AddClusterFlagWithDeprecated(fs, cfg.Metadata)
 		cmdutils.AddRegionFlag(fs, &cmd.ProviderConfig)
 		cmdutils.AddCommonFlagsForGetCmd(fs, &params.chunkSize, &params.output)
@@ -54,8 +54,8 @@ func doGetIAMIdentityMapping(cmd *cmdutils.Cmd, params *getCmdParams, arn string
 		return err
 	}
 
-	if err := ctl.CheckAuth(); err != nil {
-		return err
+	if params.output == printers.TableType {
+		cmdutils.LogRegionAndVersionInfo(cmd.ClusterConfig.Metadata)
 	}
 
 	if cfg.Metadata.Name == "" {
@@ -98,15 +98,11 @@ func doGetIAMIdentityMapping(cmd *cmdutils.Cmd, params *getCmdParams, arn string
 	if err != nil {
 		return err
 	}
-	if params.output == "table" {
+	if params.output == printers.TableType {
 		addIAMIdentityMappingTableColumns(printer.(*printers.TablePrinter))
 	}
 
-	if err := printer.PrintObjWithKind("iamidentitymappings", identities, os.Stdout); err != nil {
-		return err
-	}
-
-	return nil
+	return printer.PrintObjWithKind("iamidentitymappings", identities, os.Stdout)
 }
 
 func addIAMIdentityMappingTableColumns(printer *printers.TablePrinter) {

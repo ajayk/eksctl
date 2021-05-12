@@ -4,21 +4,26 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/pkg/errors"
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/utils"
+	"github.com/weaveworks/eksctl/pkg/vpc"
 	gfnec2 "github.com/weaveworks/goformation/v4/cloudformation/ec2"
 	gfneks "github.com/weaveworks/goformation/v4/cloudformation/eks"
 	gfnt "github.com/weaveworks/goformation/v4/cloudformation/types"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // ManagedNodeGroupResourceSet defines the CloudFormation resources required for a managed nodegroup
 type ManagedNodeGroupResourceSet struct {
 	clusterConfig         *api.ClusterConfig
-	clusterStackName      string
+	forceAddCNIPolicy     bool
 	nodeGroup             *api.ManagedNodeGroup
 	launchTemplateFetcher *LaunchTemplateFetcher
+	ec2API                ec2iface.EC2API
+	vpcImporter           vpc.Importer
 	*resourceSet
 
 	// UserDataMimeBoundary sets the MIME boundary for user data
@@ -28,13 +33,15 @@ type ManagedNodeGroupResourceSet struct {
 const ManagedNodeGroupResourceName = "ManagedNodeGroup"
 
 // NewManagedNodeGroup creates a new ManagedNodeGroupResourceSet
-func NewManagedNodeGroup(cluster *api.ClusterConfig, nodeGroup *api.ManagedNodeGroup, launchTemplateFetcher *LaunchTemplateFetcher, clusterStackName string) *ManagedNodeGroupResourceSet {
+func NewManagedNodeGroup(ec2API ec2iface.EC2API, cluster *api.ClusterConfig, nodeGroup *api.ManagedNodeGroup, launchTemplateFetcher *LaunchTemplateFetcher, forceAddCNIPolicy bool, vpcImporter vpc.Importer) *ManagedNodeGroupResourceSet {
 	return &ManagedNodeGroupResourceSet{
 		clusterConfig:         cluster,
-		clusterStackName:      clusterStackName,
+		forceAddCNIPolicy:     forceAddCNIPolicy,
 		nodeGroup:             nodeGroup,
 		launchTemplateFetcher: launchTemplateFetcher,
+		ec2API:                ec2API,
 		resourceSet:           newResourceSet(),
+		vpcImporter:           vpcImporter,
 	}
 }
 
@@ -50,7 +57,9 @@ func (m *ManagedNodeGroupResourceSet) AddAllResources() error {
 
 	var nodeRole *gfnt.Value
 	if m.nodeGroup.IAM.InstanceRoleARN == "" {
-		if err := createRole(m.resourceSet, m.clusterConfig.IAM, m.nodeGroup.IAM, true); err != nil {
+		enableSSM := m.nodeGroup.SSH != nil && api.IsEnabled(m.nodeGroup.SSH.EnableSSM)
+
+		if err := createRole(m.resourceSet, m.clusterConfig.IAM, m.nodeGroup.IAM, true, enableSSM, m.forceAddCNIPolicy); err != nil {
 			return err
 		}
 		nodeRole = gfnt.MakeFnGetAttString(cfnIAMInstanceRoleName, "Arn")
@@ -58,7 +67,7 @@ func (m *ManagedNodeGroupResourceSet) AddAllResources() error {
 		nodeRole = gfnt.NewString(NormalizeARN(m.nodeGroup.IAM.InstanceRoleARN))
 	}
 
-	subnets, err := AssignSubnets(m.nodeGroup.AvailabilityZones, m.clusterStackName, m.clusterConfig, m.nodeGroup.PrivateNetworking)
+	subnets, err := AssignSubnets(m.nodeGroup.NodeGroupBase, m.vpcImporter, m.clusterConfig)
 	if err != nil {
 		return err
 	}
@@ -73,6 +82,17 @@ func (m *ManagedNodeGroupResourceSet) AddAllResources() error {
 	if m.nodeGroup.DesiredCapacity != nil {
 		scalingConfig.DesiredSize = gfnt.NewInteger(*m.nodeGroup.DesiredCapacity)
 	}
+
+	for k, v := range m.clusterConfig.Metadata.Tags {
+		if _, exists := m.nodeGroup.Tags[k]; !exists {
+			m.nodeGroup.Tags[k] = v
+		}
+	}
+
+	taints, err := mapTaints(m.nodeGroup.Taints)
+	if err != nil {
+		return err
+	}
 	managedResource := &gfneks.Nodegroup{
 		ClusterName:   gfnt.NewString(m.clusterConfig.Metadata.Name),
 		NodegroupName: gfnt.NewString(m.nodeGroup.Name),
@@ -81,6 +101,22 @@ func (m *ManagedNodeGroupResourceSet) AddAllResources() error {
 		NodeRole:      nodeRole,
 		Labels:        m.nodeGroup.Labels,
 		Tags:          m.nodeGroup.Tags,
+		Taints:        taints,
+	}
+
+	if m.nodeGroup.Spot {
+		// TODO use constant from SDK
+		managedResource.CapacityType = gfnt.NewString("SPOT")
+	}
+
+	if m.nodeGroup.ReleaseVersion != "" {
+		managedResource.ReleaseVersion = gfnt.NewString(m.nodeGroup.ReleaseVersion)
+	}
+
+	instanceTypes := m.nodeGroup.InstanceTypeList()
+
+	makeAMIType := func() *gfnt.Value {
+		return gfnt.NewString(getAMIType(selectManagedInstanceType(m.nodeGroup)))
 	}
 
 	var launchTemplate *gfneks.Nodegroup_LaunchTemplateSpecification
@@ -102,7 +138,14 @@ func (m *ManagedNodeGroupResourceSet) AddAllResources() error {
 		}
 
 		if launchTemplateData.ImageId == nil {
-			managedResource.AmiType = gfnt.NewString(getAMIType(*launchTemplateData.InstanceType))
+			if launchTemplateData.InstanceType == nil {
+				managedResource.AmiType = makeAMIType()
+			} else {
+				managedResource.AmiType = gfnt.NewString(getAMIType(*launchTemplateData.InstanceType))
+			}
+		}
+		if launchTemplateData.InstanceType == nil {
+			managedResource.InstanceTypes = gfnt.NewStringSlice(instanceTypes...)
 		}
 	} else {
 		launchTemplateData, err := m.makeLaunchTemplateData()
@@ -110,8 +153,9 @@ func (m *ManagedNodeGroupResourceSet) AddAllResources() error {
 			return err
 		}
 		if launchTemplateData.ImageId == nil {
-			managedResource.AmiType = gfnt.NewString(getAMIType(m.nodeGroup.InstanceType))
+			managedResource.AmiType = makeAMIType()
 		}
+		managedResource.InstanceTypes = gfnt.NewStringSlice(instanceTypes...)
 
 		ltRef := m.newResource("LaunchTemplate", &gfnec2.LaunchTemplate{
 			LaunchTemplateName: gfnt.MakeFnSubString(fmt.Sprintf("${%s}", gfnt.StackName)),
@@ -127,9 +171,57 @@ func (m *ManagedNodeGroupResourceSet) AddAllResources() error {
 	return nil
 }
 
+func mapTaints(taints []api.NodeGroupTaint) ([]*gfneks.Nodegroup_Taints, error) {
+	var ret []*gfneks.Nodegroup_Taints
+
+	mapEffect := func(effect corev1.TaintEffect) string {
+		switch effect {
+		case corev1.TaintEffectNoSchedule:
+			return "NO_SCHEDULE"
+		case corev1.TaintEffectPreferNoSchedule:
+			return "PREFER_NO_SCHEDULE"
+		case corev1.TaintEffectNoExecute:
+			return "NO_EXECUTE"
+		default:
+			return ""
+		}
+	}
+
+	for _, t := range taints {
+		effect := mapEffect(t.Effect)
+		if effect == "" {
+			return nil, errors.Errorf("unexpected taint effect: %v", t.Effect)
+		}
+		ret = append(ret, &gfneks.Nodegroup_Taints{
+			Key:    gfnt.NewString(t.Key),
+			Value:  gfnt.NewString(t.Value),
+			Effect: gfnt.NewString(effect),
+		})
+	}
+	return ret, nil
+}
+
+func selectManagedInstanceType(ng *api.ManagedNodeGroup) string {
+	if len(ng.InstanceTypes) > 0 {
+		for _, instanceType := range ng.InstanceTypes {
+			if utils.IsGPUInstanceType(instanceType) {
+				return instanceType
+			}
+		}
+		return ng.InstanceTypes[0]
+	}
+	return ng.InstanceType
+}
+
 func validateLaunchTemplate(launchTemplateData *ec2.ResponseLaunchTemplateData, ng *api.ManagedNodeGroup) error {
+	const mngFieldName = "managedNodeGroup"
+
 	if launchTemplateData.InstanceType == nil {
-		return errors.New("instance type must be set in the launch template")
+		if len(ng.InstanceTypes) == 0 {
+			return errors.Errorf("instance type must be set in the launch template if %s.instanceTypes is not specified", mngFieldName)
+		}
+	} else if len(ng.InstanceTypes) > 0 {
+		return errors.Errorf("instance type must not be set in the launch template if %s.instanceTypes is specified", mngFieldName)
 	}
 
 	// Custom AMI
@@ -137,8 +229,15 @@ func validateLaunchTemplate(launchTemplateData *ec2.ResponseLaunchTemplateData, 
 		if launchTemplateData.UserData == nil {
 			return errors.New("node bootstrapping script (UserData) must be set when using a custom AMI")
 		}
+		notSupportedErr := func(fieldName string) error {
+			return errors.Errorf("cannot set %s.%s when launchTemplate.ImageId is set", mngFieldName, fieldName)
+
+		}
 		if ng.AMI != "" {
-			return errors.New("cannot set managedNodegroup.AMI when launchTemplate.ImageId is set")
+			return notSupportedErr("ami")
+		}
+		if ng.ReleaseVersion != "" {
+			return notSupportedErr("releaseVersion")
 		}
 	}
 
@@ -154,8 +253,7 @@ func getAMIType(instanceType string) string {
 		return eks.AMITypesAl2X8664Gpu
 	}
 	if utils.IsARMInstanceType(instanceType) {
-		// TODO Upgrade SDK and use constant from the eks library
-		return "AL2_ARM_64"
+		return eks.AMITypesAl2Arm64
 	}
 	return eks.AMITypesAl2X8664
 }

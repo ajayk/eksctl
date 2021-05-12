@@ -1,15 +1,11 @@
 package builder
 
 import (
-	"bytes"
-	"encoding/base64"
 	"fmt"
-	"io"
-	"mime/multipart"
 
 	"github.com/pkg/errors"
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
-	"github.com/weaveworks/eksctl/pkg/cfn/outputs"
+	"github.com/weaveworks/eksctl/pkg/nodebootstrap"
 	"github.com/weaveworks/goformation/v4/cloudformation/cloudformation"
 	gfnec2 "github.com/weaveworks/goformation/v4/cloudformation/ec2"
 	gfnt "github.com/weaveworks/goformation/v4/cloudformation/types"
@@ -17,13 +13,12 @@ import (
 
 func (m *ManagedNodeGroupResourceSet) makeLaunchTemplateData() (*gfnec2.LaunchTemplate_LaunchTemplateData, error) {
 	mng := m.nodeGroup
-
 	launchTemplateData := &gfnec2.LaunchTemplate_LaunchTemplateData{
-		InstanceType:      gfnt.NewString(mng.InstanceType),
 		TagSpecifications: makeTags(mng.NodeGroupBase, m.clusterConfig.Metadata),
 		MetadataOptions:   makeMetadataOptions(mng.NodeGroupBase),
 	}
-	userData, err := makeUserData(mng.NodeGroupBase, m.UserDataMimeBoundary)
+
+	userData, err := nodebootstrap.MakeManagedUserData(mng, m.UserDataMimeBoundary)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +26,7 @@ func (m *ManagedNodeGroupResourceSet) makeLaunchTemplateData() (*gfnec2.LaunchTe
 		launchTemplateData.UserData = gfnt.NewString(userData)
 	}
 
-	securityGroupIDs := gfnt.Slice{makeImportValue(m.clusterStackName, outputs.ClusterDefaultSecurityGroup)}
+	securityGroupIDs := m.vpcImporter.SecurityGroups()
 	for _, sgID := range mng.SecurityGroups.AttachIDs {
 		securityGroupIDs = append(securityGroupIDs, gfnt.NewString(sgID))
 	}
@@ -43,52 +38,38 @@ func (m *ManagedNodeGroupResourceSet) makeLaunchTemplateData() (*gfnec2.LaunchTe
 	if mng.SSH != nil && api.IsSetAndNonEmptyString(mng.SSH.PublicKeyName) {
 		launchTemplateData.KeyName = gfnt.NewString(*mng.SSH.PublicKeyName)
 
-		var sgIngressRules []gfnec2.SecurityGroup_Ingress
-		if len(mng.SSH.SourceSecurityGroupIDs) > 0 {
-			for _, sgID := range mng.SSH.SourceSecurityGroupIDs {
-				sgIngressRules = append(sgIngressRules, gfnec2.SecurityGroup_Ingress{
-					FromPort:              sgPortSSH,
-					ToPort:                sgPortSSH,
-					IpProtocol:            sgProtoTCP,
-					SourceSecurityGroupId: gfnt.NewString(sgID),
-				})
-			}
-		} else {
-			makeSSHIngress := func(cidrIP *gfnt.Value) gfnec2.SecurityGroup_Ingress {
-				return gfnec2.SecurityGroup_Ingress{
-					FromPort:   sgPortSSH,
-					ToPort:     sgPortSSH,
-					IpProtocol: sgProtoTCP,
-					CidrIp:     cidrIP,
-				}
-			}
-
-			if mng.PrivateNetworking {
-				allInternalIPv4 := gfnt.NewString(m.clusterConfig.VPC.CIDR.String())
-				sgIngressRules = []gfnec2.SecurityGroup_Ingress{makeSSHIngress(allInternalIPv4)}
-			} else {
-				sgIngressRules = []gfnec2.SecurityGroup_Ingress{
-					makeSSHIngress(sgSourceAnywhereIPv4),
-					{
-						FromPort:   sgPortSSH,
-						ToPort:     sgPortSSH,
-						IpProtocol: sgProtoTCP,
-						CidrIpv6:   sgSourceAnywhereIPv6,
-					},
-				}
-			}
+		if *mng.SSH.Allow {
+			vpcID := m.vpcImporter.VPC()
+			sshRef := m.newResource("SSH", &gfnec2.SecurityGroup{
+				GroupName:            gfnt.MakeFnSubString(fmt.Sprintf("${%s}-remoteAccess", gfnt.StackName)),
+				VpcId:                vpcID,
+				SecurityGroupIngress: makeSSHIngressRules(mng.NodeGroupBase, m.clusterConfig.VPC.CIDR.String(), fmt.Sprintf("managed worker nodes in group %s", mng.Name)),
+				GroupDescription:     gfnt.NewString("Allow SSH access"),
+			})
+			securityGroupIDs = append(securityGroupIDs, sshRef)
 		}
-
-		sshRef := m.newResource("SSH", &gfnec2.SecurityGroup{
-			GroupName:            gfnt.MakeFnSubString(fmt.Sprintf("${%s}-remoteAccess", gfnt.StackName)),
-			VpcId:                makeImportValue(m.clusterStackName, outputs.ClusterVPC),
-			SecurityGroupIngress: sgIngressRules,
-			GroupDescription:     gfnt.NewString("Allow SSH access"),
-		})
-		securityGroupIDs = append(securityGroupIDs, sshRef)
 	}
 
-	launchTemplateData.SecurityGroupIds = gfnt.NewValue(securityGroupIDs)
+	if api.IsEnabled(mng.EFAEnabled) {
+		// we don't want to touch the network interfaces at all if we have a
+		// managed nodegroup, unless EFA is enabled
+		desc := "worker nodes in group " + m.nodeGroup.Name
+		efaSG := m.addEFASecurityGroup(m.vpcImporter.VPC(), m.clusterConfig.Metadata.Name, desc)
+		securityGroupIDs = append(securityGroupIDs, efaSG)
+		if err := buildNetworkInterfaces(launchTemplateData, mng.InstanceTypeList(), true, securityGroupIDs, m.ec2API); err != nil {
+			return nil, errors.Wrap(err, "couldn't build network interfaces for launch template data")
+		}
+		if mng.Placement == nil {
+			groupName := m.newResource("NodeGroupPlacementGroup", &gfnec2.PlacementGroup{
+				Strategy: gfnt.NewString("cluster"),
+			})
+			launchTemplateData.Placement = &gfnec2.LaunchTemplate_Placement{
+				GroupName: groupName,
+			}
+		}
+	} else {
+		launchTemplateData.SecurityGroupIds = gfnt.NewSlice(securityGroupIDs...)
+	}
 
 	if mng.EBSOptimized != nil {
 		launchTemplateData.EbsOptimized = gfnt.NewBoolean(*mng.EBSOptimized)
@@ -107,8 +88,15 @@ func (m *ManagedNodeGroupResourceSet) makeLaunchTemplateData() (*gfnec2.LaunchTe
 		if api.IsSetAndNonEmptyString(mng.VolumeKmsKeyID) {
 			mapping.Ebs.KmsKeyId = gfnt.NewString(*mng.VolumeKmsKeyID)
 		}
-		if *mng.VolumeType == api.NodeVolumeTypeIO1 {
-			mapping.Ebs.Iops = gfnt.NewInteger(*mng.VolumeIOPS)
+
+		if *mng.VolumeType == api.NodeVolumeTypeIO1 || *mng.VolumeType == api.NodeVolumeTypeGP3 {
+			if mng.VolumeIOPS != nil {
+				mapping.Ebs.Iops = gfnt.NewInteger(*mng.VolumeIOPS)
+			}
+		}
+
+		if *mng.VolumeType == api.NodeVolumeTypeGP3 && mng.VolumeThroughput != nil {
+			mapping.Ebs.Throughput = gfnt.NewInteger(*mng.VolumeThroughput)
 		}
 
 		if mng.VolumeName != nil {
@@ -129,67 +117,48 @@ func (m *ManagedNodeGroupResourceSet) makeLaunchTemplateData() (*gfnec2.LaunchTe
 	return launchTemplateData, nil
 }
 
-func createMimeMessage(writer io.Writer, scripts []string, mimeBoundary string) error {
-	mw := multipart.NewWriter(writer)
-	if mimeBoundary != "" {
-		if err := mw.SetBoundary(mimeBoundary); err != nil {
-			return errors.Wrap(err, "unexpected error setting MIME boundary")
+func makeSSHIngressRules(n *api.NodeGroupBase, vpcCIDR, description string) []gfnec2.SecurityGroup_Ingress {
+	var sgIngressRules []gfnec2.SecurityGroup_Ingress
+	if *n.SSH.Allow {
+		if len(n.SSH.SourceSecurityGroupIDs) > 0 {
+			for _, sgID := range n.SSH.SourceSecurityGroupIDs {
+				sgIngressRules = append(sgIngressRules, gfnec2.SecurityGroup_Ingress{
+					FromPort:              sgPortSSH,
+					ToPort:                sgPortSSH,
+					IpProtocol:            sgProtoTCP,
+					SourceSecurityGroupId: gfnt.NewString(sgID),
+				})
+			}
+		} else {
+			makeSSHIngress := func(cidrIP *gfnt.Value, sshDesc string) gfnec2.SecurityGroup_Ingress {
+				return gfnec2.SecurityGroup_Ingress{
+					FromPort:    sgPortSSH,
+					ToPort:      sgPortSSH,
+					IpProtocol:  sgProtoTCP,
+					CidrIp:      cidrIP,
+					Description: gfnt.NewString(sshDesc),
+				}
+			}
+
+			sshDesc := "Allow SSH access to " + description
+
+			if n.PrivateNetworking {
+				allInternalIPv4 := gfnt.NewString(vpcCIDR)
+				sgIngressRules = []gfnec2.SecurityGroup_Ingress{makeSSHIngress(allInternalIPv4, sshDesc+" (private, only inside VPC)")}
+			} else {
+				sgIngressRules = append(sgIngressRules,
+					makeSSHIngress(sgSourceAnywhereIPv4, sshDesc),
+					gfnec2.SecurityGroup_Ingress{
+						CidrIpv6:    sgSourceAnywhereIPv6,
+						Description: gfnt.NewString(sshDesc),
+						IpProtocol:  sgProtoTCP,
+						FromPort:    sgPortSSH,
+						ToPort:      sgPortSSH,
+					})
+			}
 		}
 	}
-	fmt.Fprint(writer, "MIME-Version: 1.0\r\n")
-	fmt.Fprintf(writer, "Content-Type: multipart/mixed; boundary=%s\r\n\r\n", mw.Boundary())
-
-	for _, script := range scripts {
-		part, err := mw.CreatePart(map[string][]string{
-			"Content-Type": {"text/x-shellscript", `charset="us-ascii"`},
-		})
-
-		if err != nil {
-			return err
-		}
-
-		if _, err = part.Write([]byte(script)); err != nil {
-			return err
-		}
-	}
-	return mw.Close()
-}
-
-func makeUserData(ng *api.NodeGroupBase, mimeBoundary string) (string, error) {
-	var (
-		buf     bytes.Buffer
-		scripts []string
-	)
-
-	if len(ng.PreBootstrapCommands) > 0 {
-		scripts = append(scripts, ng.PreBootstrapCommands...)
-	}
-
-	if ng.OverrideBootstrapCommand != nil {
-		scripts = append(scripts, *ng.OverrideBootstrapCommand)
-	} else if ng.MaxPodsPerNode != 0 {
-		scripts = append(scripts, makeMaxPodsScript(ng.MaxPodsPerNode))
-	}
-
-	if len(scripts) == 0 {
-		return "", nil
-	}
-
-	if err := createMimeMessage(&buf, scripts, mimeBoundary); err != nil {
-		return "", err
-	}
-
-	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
-}
-
-func makeMaxPodsScript(maxPods int) string {
-	script := `#!/bin/sh
-set -ex
-sed -i -E "s/^USE_MAX_PODS=\"\\$\{USE_MAX_PODS:-true}\"/USE_MAX_PODS=false/" /etc/eks/bootstrap.sh
-KUBELET_CONFIG=/etc/kubernetes/kubelet/kubelet-config.json
-`
-	script += fmt.Sprintf(`echo "$(jq ".maxPods=%v" $KUBELET_CONFIG)" > $KUBELET_CONFIG`, maxPods)
-	return script
+	return sgIngressRules
 }
 
 func makeTags(ng *api.NodeGroupBase, meta *api.ClusterMeta) []gfnec2.LaunchTemplate_TagSpecification {
@@ -205,10 +174,17 @@ func makeTags(ng *api.NodeGroupBase, meta *api.ClusterMeta) []gfnec2.LaunchTempl
 			Value: gfnt.NewString(v),
 		})
 	}
-	return []gfnec2.LaunchTemplate_TagSpecification{
-		{
+
+	var launchTemplateTagSpecs []gfnec2.LaunchTemplate_TagSpecification
+
+	launchTemplateTagSpecs = append(launchTemplateTagSpecs,
+		gfnec2.LaunchTemplate_TagSpecification{
 			ResourceType: gfnt.NewString("instance"),
 			Tags:         cfnTags,
-		},
-	}
+		}, gfnec2.LaunchTemplate_TagSpecification{
+			ResourceType: gfnt.NewString("volume"),
+			Tags:         cfnTags,
+		})
+
+	return launchTemplateTagSpecs
 }

@@ -21,7 +21,6 @@ var _ = Describe("cmdutils configfile", func() {
 	}
 
 	const examplesDir = "../../../examples/"
-	const numOfExamples = 23
 
 	Context("load configfiles", func() {
 
@@ -123,7 +122,7 @@ var _ = Describe("cmdutils configfile", func() {
 			examples, err := filepath.Glob(examplesDir + "*.yaml")
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(examples).To(HaveLen(numOfExamples))
+			Expect(examples).ToNot(BeEmpty())
 			for _, example := range examples {
 				cmd := &Cmd{
 					CobraCommand:      newCmd(),
@@ -167,7 +166,9 @@ var _ = Describe("cmdutils configfile", func() {
 					ProviderConfig:    api.ProviderConfig{},
 				}
 
-				params := &CreateClusterCmdParams{WithoutNodeGroup: true, Managed: false}
+				params := &CreateClusterCmdParams{WithoutNodeGroup: true, CreateManagedNGOptions: CreateManagedNGOptions{
+					Managed: false,
+				}}
 				Expect(NewCreateClusterLoader(cmd, filter.NewNodeGroupFilter(), nil, params).Load()).To(Succeed())
 				cfg := cmd.ClusterConfig
 				Expect(cfg.VPC.NAT.Gateway).To(Not(BeNil()))
@@ -223,7 +224,9 @@ var _ = Describe("cmdutils configfile", func() {
 
 				params := &CreateClusterCmdParams{
 					WithoutNodeGroup: loaderTest.withoutNodeGroup,
-					Managed:          loaderTest.managed,
+					CreateManagedNGOptions: CreateManagedNGOptions{
+						Managed: loaderTest.managed,
+					},
 				}
 				Expect(NewCreateClusterLoader(cmd, ngFilter, loaderTest.ng, params).Load()).To(Succeed())
 
@@ -243,9 +246,6 @@ var _ = Describe("cmdutils configfile", func() {
 						Expect(cmd.ClusterConfig.NodeGroups[0]).To(Equal(loaderTest.ng))
 					}
 				}
-
-				_, err := cmd.NewCtl()
-				Expect(err).ToNot(HaveOccurred())
 			}
 		})
 
@@ -266,8 +266,8 @@ var _ = Describe("cmdutils configfile", func() {
 				{"03-two-nodegroups.yaml", 2, false, false},
 				{"05-advanced-nodegroups.yaml", 3, true, false},
 				{"05-advanced-nodegroups.yaml", 3, false, false},
-				{"07-ssh-keys.yaml", 6, true, false},
-				{"07-ssh-keys.yaml", 6, false, false},
+				{"07-ssh-keys.yaml", 7, true, false},
+				{"07-ssh-keys.yaml", 7, false, false},
 				{"15-managed-nodes.yaml", 4, true, true},
 				{"15-managed-nodes.yaml", 4, false, true},
 				{"20-bottlerocket.yaml", 2, false, false},
@@ -285,7 +285,9 @@ var _ = Describe("cmdutils configfile", func() {
 
 				params := &CreateClusterCmdParams{
 					WithoutNodeGroup: loaderTest.withoutNodeGroup,
-					Managed:          loaderTest.managed,
+					CreateManagedNGOptions: CreateManagedNGOptions{
+						Managed: loaderTest.managed,
+					},
 				}
 				Expect(NewCreateClusterLoader(cmd, ngFilter, nil, params).Load()).To(Succeed())
 
@@ -298,9 +300,6 @@ var _ = Describe("cmdutils configfile", func() {
 					Expect(cmd.ClusterConfig.NodeGroups).To(HaveLen(loaderTest.nodeGroupCount))
 					Expect(cmd.ClusterConfig.ManagedNodeGroups).To(BeEmpty())
 				}
-
-				_, err := cmd.NewCtl()
-				Expect(err).ToNot(HaveOccurred())
 			}
 
 		})
@@ -317,7 +316,9 @@ var _ = Describe("cmdutils configfile", func() {
 
 				params := &CreateClusterCmdParams{
 					WithoutNodeGroup: true,
-					Managed:          false,
+					CreateManagedNGOptions: CreateManagedNGOptions{
+						Managed: false,
+					},
 				}
 
 				Expect(NewCreateClusterLoader(cmd, filter.NewNodeGroupFilter(), nil, params).Load()).To(Succeed())

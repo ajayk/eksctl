@@ -3,7 +3,17 @@
         "Type": "AWS::EC2::LaunchTemplate",
         "Properties": {
             "LaunchTemplateData": {
-                "InstanceType": "m5.xlarge",
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "Iops": 3000,
+                            "Throughput": 125,
+                            "VolumeSize": 80,
+                            "VolumeType": "gp3"
+                        }
+                    }
+                ],
                 "MetadataOptions": {
                     "HttpPutResponseHopLimit": 2,
                     "HttpTokens": "optional"
@@ -33,7 +43,24 @@
                                 "Value": "managed"
                             }
                         ]
-                    }
+                    },
+                  {
+                    "ResourceType": "volume",
+                    "Tags": [
+                      {
+                        "Key": "Name",
+                        "Value": "lt-standard-Node"
+                      },
+                      {
+                        "Key": "alpha.eksctl.io/nodegroup-name",
+                        "Value": "standard"
+                      },
+                      {
+                        "Key": "alpha.eksctl.io/nodegroup-type",
+                        "Value": "managed"
+                      }
+                    ]
+                  }
                 ]
             },
             "LaunchTemplateName": {
@@ -50,6 +77,7 @@
                 "alpha.eksctl.io/cluster-name": "lt",
                 "alpha.eksctl.io/nodegroup-name": "standard"
             },
+            "InstanceTypes": ["m5.xlarge"],
             "NodeRole": {
                 "Fn::GetAtt": [
                     "NodeInstanceRole",

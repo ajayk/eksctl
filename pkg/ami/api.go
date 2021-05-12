@@ -21,6 +21,13 @@ const (
 	ImageClassARM
 )
 
+const (
+	// used by kubelet
+	bottlerocketDataDisk = "/dev/xvdb"
+	// used by OS
+	bottlerocketOSDisk = "/dev/xvda"
+)
+
 // ImageClasses is a list of image class names
 var ImageClasses = []string{
 	"ImageClassGeneral",
@@ -54,6 +61,10 @@ func Use(ec2api ec2iface.EC2API, ng *api.NodeGroupBase) error {
 	case "ebs":
 		if !api.IsSetAndNonEmptyString(ng.VolumeName) {
 			ng.VolumeName = image.RootDeviceName
+			if ng.AMIFamily == api.NodeImageFamilyBottlerocket {
+				ng.VolumeName = aws.String(bottlerocketDataDisk)
+				ng.AdditionalEncryptedVolume = bottlerocketOSDisk
+			}
 		}
 		rootDeviceMapping, err := findRootDeviceMapping(image)
 		if err != nil {

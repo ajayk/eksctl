@@ -9,7 +9,6 @@ import (
 
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/ctl/cmdutils"
-	"github.com/weaveworks/eksctl/pkg/eks"
 )
 
 func nodeGroupHealthCmd(cmd *cmdutils.Cmd) {
@@ -40,12 +39,10 @@ func nodeGroupHealthCmd(cmd *cmdutils.Cmd) {
 func getNodeGroupHealth(cmd *cmdutils.Cmd, nodeGroupName string) error {
 	cfg := cmd.ClusterConfig
 
-	ctl := eks.New(&cmd.ProviderConfig, cmd.ClusterConfig)
-
-	if err := ctl.CheckAuth(); err != nil {
+	ctl, err := cmd.NewCtl()
+	if err != nil {
 		return err
 	}
-
 	if cfg.Metadata.Name == "" {
 		return cmdutils.ErrMustBeSet(cmdutils.ClusterNameFlag(cmd))
 	}
@@ -67,7 +64,7 @@ func getNodeGroupHealth(cmd *cmdutils.Cmd, nodeGroupName string) error {
 	}
 
 	stackCollection := manager.NewStackCollection(ctl.Provider, cfg)
-	managedService := managed.NewService(ctl.Provider, stackCollection, cfg.Metadata.Name)
+	managedService := managed.NewService(ctl.Provider.EKS(), ctl.Provider.SSM(), ctl.Provider.EC2(), stackCollection, cfg.Metadata.Name)
 	healthIssues, err := managedService.GetHealth(nodeGroupName)
 	if err != nil {
 		return err

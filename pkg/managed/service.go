@@ -2,6 +2,13 @@ package managed
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -27,10 +34,11 @@ import (
 
 // A Service provides methods for managing managed nodegroups
 type Service struct {
-	provider              api.ClusterProvider
+	eksAPI                eksiface.EKSAPI
+	ssmAPI                ssmiface.SSMAPI
 	launchTemplateFetcher *builder.LaunchTemplateFetcher
 	clusterName           string
-	stackCollection       *manager.StackCollection
+	stackCollection       manager.StackManager
 }
 
 // HealthIssue represents a health issue with a managed nodegroup
@@ -48,6 +56,10 @@ type UpgradeOptions struct {
 	// LaunchTemplateVersion launch template version
 	// valid only if a nodegroup was created with a launch template
 	LaunchTemplateVersion string
+	//ForceUpgrade enables force upgrade
+	ForceUpgrade bool
+	// ReleaseVersion AMI version of the EKS optimized AMI to use
+	ReleaseVersion string
 }
 
 // TODO use goformation types
@@ -55,12 +67,13 @@ const (
 	labelsPath = "Resources.ManagedNodeGroup.Properties.Labels"
 )
 
-// NewService creates a new Service
-func NewService(provider api.ClusterProvider, stackCollection *manager.StackCollection, clusterName string) *Service {
+func NewService(eksAPI eksiface.EKSAPI, ssmAPI ssmiface.SSMAPI, ec2API ec2iface.EC2API,
+	stackCollection manager.StackManager, clusterName string) *Service {
 	return &Service{
-		provider:              provider,
+		eksAPI:                eksAPI,
+		ssmAPI:                ssmAPI,
 		stackCollection:       stackCollection,
-		launchTemplateFetcher: builder.NewLaunchTemplateFetcher(provider.EC2()),
+		launchTemplateFetcher: builder.NewLaunchTemplateFetcher(ec2API),
 		clusterName:           clusterName,
 	}
 }
@@ -72,7 +85,7 @@ func (m *Service) GetHealth(nodeGroupName string) ([]HealthIssue, error) {
 		NodegroupName: &nodeGroupName,
 	}
 
-	output, err := m.provider.EKS().DescribeNodegroup(input)
+	output, err := m.eksAPI.DescribeNodegroup(input)
 	if err != nil {
 		if isNotFound(err) {
 			return nil, errors.Wrapf(err, "could not find a managed nodegroup with name %q", nodeGroupName)
@@ -138,7 +151,7 @@ func (m *Service) GetLabels(nodeGroupName string) (map[string]string, error) {
 // the current Kubernetes version if the version isn't specified
 // If options.LaunchTemplateVersion is set, it also upgrades the nodegroup to the specified launch template version
 func (m *Service) UpgradeNodeGroup(options UpgradeOptions) error {
-	output, err := m.provider.EKS().DescribeNodegroup(&eks.DescribeNodegroupInput{
+	output, err := m.eksAPI.DescribeNodegroup(&eks.DescribeNodegroupInput{
 		ClusterName:   &m.clusterName,
 		NodegroupName: &options.NodegroupName,
 	})
@@ -150,13 +163,11 @@ func (m *Service) UpgradeNodeGroup(options UpgradeOptions) error {
 		return err
 	}
 
-	nodeGroup := output.Nodegroup
-
-	if options.KubernetesVersion != "" {
-		if _, err := semver.ParseTolerant(options.KubernetesVersion); err != nil {
-			return errors.Wrap(err, "invalid Kubernetes version")
-		}
+	if options.KubernetesVersion != "" && options.ReleaseVersion != "" {
+		return errors.New("only one of kubernetes-version or release-version can be specified")
 	}
+
+	nodeGroup := output.Nodegroup
 
 	template, err := m.stackCollection.GetManagedNodeGroupTemplate(options.NodegroupName)
 	if err != nil {
@@ -213,11 +224,13 @@ func (m *Service) UpgradeNodeGroup(options UpgradeOptions) error {
 		return err
 	}
 
-	if usesCustomAMI && options.KubernetesVersion != "" {
-		return errors.New("cannot specify kubernetes-version when using a custom AMI")
+	if usesCustomAMI && (options.KubernetesVersion != "" || options.ReleaseVersion != "") {
+		return errors.New("cannot specify kubernetes-version or release-version when using a custom AMI")
 	}
 
-	if !usesCustomAMI {
+	if options.ReleaseVersion != "" {
+		ngResource.ReleaseVersion = gfnt.NewString(options.ReleaseVersion)
+	} else if !usesCustomAMI {
 		kubernetesVersion := options.KubernetesVersion
 		if kubernetesVersion == "" {
 			// Use the current Kubernetes version
@@ -231,15 +244,28 @@ func (m *Service) UpgradeNodeGroup(options UpgradeOptions) error {
 		if err != nil {
 			return err
 		}
-		if latestReleaseVersion == *nodeGroup.ReleaseVersion && options.LaunchTemplateVersion == "" {
+		latest, err := parseReleaseVersion(latestReleaseVersion)
+		if err != nil {
+			return err
+		}
+		current, err := parseReleaseVersion(*nodeGroup.ReleaseVersion)
+		if err != nil {
+			return err
+		}
+
+		if latest.LTE(current) && options.LaunchTemplateVersion == "" {
 			logger.Info("nodegroup %q is already up-to-date", *nodeGroup.NodegroupName)
 			return nil
 		}
-		ngResource.ReleaseVersion = gfnt.NewString(latestReleaseVersion)
+		if latest.GTE(current) {
+			ngResource.ReleaseVersion = gfnt.NewString(latestReleaseVersion)
+		}
 	}
 	if options.LaunchTemplateVersion != "" {
 		ngResource.LaunchTemplate.Version = gfnt.NewString(options.LaunchTemplateVersion)
 	}
+
+	ngResource.ForceUpdateEnabled = gfnt.NewBoolean(options.ForceUpgrade)
 
 	logger.Info("upgrading nodegroup version")
 	if err := updateStack(stack); err != nil {
@@ -249,13 +275,53 @@ func (m *Service) UpgradeNodeGroup(options UpgradeOptions) error {
 	return nil
 }
 
+// parseReleaseVersion parses an AMI release version string that's in the format `1.18.8-20201007`
+func parseReleaseVersion(releaseVersion string) (amiReleaseVersion, error) {
+	parts := strings.Split(releaseVersion, "-")
+	if len(parts) != 2 {
+		return amiReleaseVersion{}, errors.Errorf("unexpected format for release version: %q", releaseVersion)
+	}
+	v, err := semver.ParseTolerant(parts[0])
+	if err != nil {
+		return amiReleaseVersion{}, errors.Wrap(err, "invalid SemVer version")
+	}
+	return amiReleaseVersion{
+		Version: v,
+		Date:    parts[1],
+	}, nil
+}
+
+type amiReleaseVersion struct {
+	Version semver.Version
+	Date    string
+}
+
+// LTE checks if a is less than or equal to b.
+func (a amiReleaseVersion) LTE(b amiReleaseVersion) bool {
+	return a.Compare(b) <= 0
+}
+
+// GTE checks if a is greater than or equal to b.
+func (a amiReleaseVersion) GTE(b amiReleaseVersion) bool {
+	return a.Compare(b) >= 0
+}
+
+// Compare returns 0 if a==b, -1 if a < b, and +1 if a > b.
+func (a amiReleaseVersion) Compare(b amiReleaseVersion) int {
+	cmp := a.Version.Compare(b.Version)
+	if cmp == 0 {
+		return strings.Compare(a.Date, b.Date)
+	}
+	return cmp
+}
+
 func (m *Service) requiresStackUpdate(nodeGroupName string) (bool, error) {
 	ngStack, err := m.stackCollection.DescribeNodeGroupStack(nodeGroupName)
 	if err != nil {
 		return false, err
 	}
 
-	ver, found, err := manager.GetEksctlVersion(ngStack.Tags)
+	ver, found, err := manager.GetEksctlVersionFromTags(ngStack.Tags)
 	if err != nil {
 		return false, err
 	}
@@ -263,7 +329,7 @@ func (m *Service) requiresStackUpdate(nodeGroupName string) (bool, error) {
 		return true, nil
 	}
 
-	curVer, err := semver.ParseTolerant(version.GetVersion())
+	curVer, err := version.ParseEksctlVersion(version.GetVersion())
 	if err != nil {
 		return false, errors.Wrap(err, "unexpected error parsing current eksctl version")
 	}
@@ -276,7 +342,7 @@ func (m *Service) getLatestReleaseVersion(kubernetesVersion string, nodeGroup *e
 		return "", err
 	}
 
-	ssmOutput, err := m.provider.SSM().GetParameter(&ssm.GetParameterInput{
+	ssmOutput, err := m.ssmAPI.GetParameter(&ssm.GetParameterInput{
 		Name: &ssmParameterName,
 	})
 	if err != nil {

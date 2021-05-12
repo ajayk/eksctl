@@ -45,10 +45,6 @@ func doUpdateKubeProxy(cmd *cmdutils.Cmd) error {
 	}
 	cmdutils.LogRegionAndVersionInfo(meta)
 
-	if err := ctl.CheckAuth(); err != nil {
-		return err
-	}
-
 	if ok, err := ctl.CanUpdate(cfg); !ok {
 		return err
 	}
@@ -63,7 +59,7 @@ func doUpdateKubeProxy(cmd *cmdutils.Cmd) error {
 		return err
 	}
 
-	updateRequired, err := defaultaddons.UpdateKubeProxyImageTag(rawClient.ClientSet(), kubernetesVersion, cmd.Plan)
+	updateRequired, err := defaultaddons.UpdateKubeProxy(rawClient.ClientSet(), kubernetesVersion, cmd.Plan)
 	if err != nil {
 		return err
 	}

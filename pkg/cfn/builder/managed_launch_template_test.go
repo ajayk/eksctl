@@ -2,7 +2,6 @@ package builder
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"path"
 
@@ -16,13 +15,16 @@ import (
 	"github.com/stretchr/testify/mock"
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/testutils/mockprovider"
+	vpcfakes "github.com/weaveworks/eksctl/pkg/vpc/fakes"
 	"github.com/weaveworks/goformation/v4"
+	gfnt "github.com/weaveworks/goformation/v4/cloudformation/types"
 )
 
 type mngCase struct {
 	ng                *api.ManagedNodeGroup
 	resourcesFilename string
 	mockFetcherFn     func(*mockprovider.MockProvider)
+	errMsg            string
 }
 
 var _ = Describe("ManagedNodeGroup builder", func() {
@@ -37,9 +39,20 @@ var _ = Describe("ManagedNodeGroup builder", func() {
 			m.mockFetcherFn(provider)
 		}
 
-		stack := NewManagedNodeGroup(clusterConfig, m.ng, NewLaunchTemplateFetcher(provider.MockEC2()), fmt.Sprintf("eksctl-%s", clusterConfig.Metadata.Name))
+		fakeVPCImporter := new(vpcfakes.FakeImporter)
+		fakeVPCImporter.VPCReturns(gfnt.MakeFnImportValueString("eksctl-lt::VPC"))
+		fakeVPCImporter.SecurityGroupsReturns(gfnt.Slice{gfnt.MakeFnImportValueString("eksctl-lt::ClusterSecurityGroupId")})
+		fakeVPCImporter.SubnetsPublicReturns(gfnt.MakeFnSplit(",", gfnt.MakeFnImportValueString("eksctl-lt::SubnetsPublic")))
+
+		stack := NewManagedNodeGroup(provider.MockEC2(), clusterConfig, m.ng, NewLaunchTemplateFetcher(provider.MockEC2()), false, fakeVPCImporter)
 		stack.UserDataMimeBoundary = "//"
 		err := stack.AddAllResources()
+		if m.errMsg != "" {
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(m.errMsg))
+			return
+		}
+
 		Expect(err).ToNot(HaveOccurred())
 		bytes, err := stack.RenderJSON()
 		Expect(err).ToNot(HaveOccurred())
@@ -131,12 +144,29 @@ API_SERVER_URL=https://test.com
 					SSH: &api.NodeGroupSSH{
 						Allow:         api.Enabled(),
 						PublicKeyName: aws.String("test-keypair"),
+						EnableSSM:     api.Enabled(),
 					},
 				},
 			},
 
 			resourcesFilename: "ssh_enabled.json",
 		}),
+
+		Entry("SSH configured but allowed=false", &mngCase{
+			ng: &api.ManagedNodeGroup{
+				NodeGroupBase: &api.NodeGroupBase{
+					Name: "ssh-disabled",
+					SSH: &api.NodeGroupSSH{
+						Allow:         api.Disabled(),
+						PublicKeyName: aws.String("test-keypair"),
+						EnableSSM:     api.Enabled(),
+					},
+				},
+			},
+			// The SG should not be created
+			resourcesFilename: "ssh_disabled.json",
+		}),
+
 		Entry("With placement group", &mngCase{
 			ng: &api.ManagedNodeGroup{
 				NodeGroupBase: &api.NodeGroupBase{
@@ -148,6 +178,80 @@ API_SERVER_URL=https://test.com
 				},
 			},
 			resourcesFilename: "placement.json",
+		}),
+
+		Entry("With Spot instances", &mngCase{
+			ng: &api.ManagedNodeGroup{
+				NodeGroupBase: &api.NodeGroupBase{
+					Name: "spot",
+				},
+				Spot:          true,
+				InstanceTypes: []string{"c3.large", "c4.large", "c5.large", "c5d.large", "c5n.large", "c5a.large"},
+			},
+			resourcesFilename: "spot.json",
+		}),
+
+		Entry("Without instance type set", &mngCase{
+			ng: &api.ManagedNodeGroup{
+				NodeGroupBase: &api.NodeGroupBase{
+					Name: "template-custom-ami",
+				},
+				LaunchTemplate: &api.LaunchTemplate{
+					ID:      "lt-1234",
+					Version: aws.String("2"),
+				},
+			},
+			mockFetcherFn: mockLaunchTemplate(func(input *ec2.DescribeLaunchTemplateVersionsInput) bool {
+				return *input.LaunchTemplateId == "lt-1234" && *input.Versions[0] == "2"
+			}, &ec2.ResponseLaunchTemplateData{
+				ImageId:  aws.String("ami-1234"),
+				KeyName:  aws.String("key-name"),
+				UserData: aws.String("bootstrap.sh"),
+			}),
+			errMsg: "instance type must be set in the launch template",
+		}),
+
+		Entry("With instance type set", &mngCase{
+			ng: &api.ManagedNodeGroup{
+				NodeGroupBase: &api.NodeGroupBase{
+					Name: "template-custom-ami",
+				},
+				InstanceTypes: []string{"t2.medium"},
+				LaunchTemplate: &api.LaunchTemplate{
+					ID:      "lt-1234",
+					Version: aws.String("2"),
+				},
+			},
+			mockFetcherFn: mockLaunchTemplate(func(input *ec2.DescribeLaunchTemplateVersionsInput) bool {
+				return *input.LaunchTemplateId == "lt-1234" && *input.Versions[0] == "2"
+			}, &ec2.ResponseLaunchTemplateData{
+				ImageId:      aws.String("ami-1234"),
+				InstanceType: aws.String("m5.large"),
+				KeyName:      aws.String("key-name"),
+				UserData:     aws.String("bootstrap.sh"),
+			}),
+			errMsg: "instance type must not be set in the launch template",
+		}),
+
+		Entry("With launch template and multiple instance types", &mngCase{
+			ng: &api.ManagedNodeGroup{
+				NodeGroupBase: &api.NodeGroupBase{
+					Name: "template-custom-ami",
+				},
+				InstanceTypes: []string{"c3.large", "c4.large", "c5.large", "c5d.large", "c5n.large", "c5a.large"},
+				LaunchTemplate: &api.LaunchTemplate{
+					ID:      "lt-1234",
+					Version: aws.String("3"),
+				},
+			},
+			mockFetcherFn: mockLaunchTemplate(func(input *ec2.DescribeLaunchTemplateVersionsInput) bool {
+				return *input.LaunchTemplateId == "lt-1234" && *input.Versions[0] == "3"
+			}, &ec2.ResponseLaunchTemplateData{
+				ImageId:  aws.String("ami-1234"),
+				KeyName:  aws.String("key-name"),
+				UserData: aws.String("bootstrap.sh"),
+			}),
+			resourcesFilename: "lt_instance_types.json",
 		}),
 	)
 })

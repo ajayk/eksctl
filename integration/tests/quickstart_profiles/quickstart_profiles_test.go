@@ -16,7 +16,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var params *tests.Params
+var (
+	params *tests.Params
+)
 
 func init() {
 	// Call testing.Init() prior to tests.NewParams(), as otherwise -test.* will not be recognised. See also: https://golang.org/doc/go1.13#testing
@@ -51,27 +53,26 @@ var _ = Describe("Enable and use GitOps quickstart profiles", func() {
 	BeforeEach(func() {
 		if branch == "" {
 			branch = namer.RandomName()
-			cloneDir, err = git.CreateBranch(branch, params.PrivateSSHKeyPath)
+			cloneDir, err = git.CreateBranch(branch)
 		}
 	})
 
 	Context("enable repo", func() {
 		It("should add Flux to the repo and the cluster", func() {
 			Expect(err).NotTo(HaveOccurred()) // Creating the branch should have succeeded.
-			AssertFluxManifestsAbsentInGit(branch, params.PrivateSSHKeyPath)
-			AssertFluxPodsAbsentInKubernetes(params.KubeconfigPath)
+			AssertFluxManifestsAbsentInGit(branch)
+			AssertFluxPodsAbsentInKubernetes(params.KubeconfigPath, "flux")
 
 			cmd := params.EksctlCmd.WithArgs(
 				"enable", "repo",
 				"--git-url", git.Repository,
 				"--git-email", git.Email,
-				"--git-private-ssh-key-path", params.PrivateSSHKeyPath,
 				"--git-branch", branch,
 				"--cluster", params.ClusterName,
 			)
 			Expect(cmd).To(RunSuccessfully())
 
-			AssertFluxManifestsPresentInGit(branch, params.PrivateSSHKeyPath)
+			AssertFluxManifestsPresentInGit(branch)
 			AssertFluxPodsPresentInKubernetes(params.KubeconfigPath)
 		})
 	})
@@ -85,7 +86,6 @@ var _ = Describe("Enable and use GitOps quickstart profiles", func() {
 				"enable", "repo",
 				"--git-url", git.Repository,
 				"--git-email", git.Email,
-				"--git-private-ssh-key-path", params.PrivateSSHKeyPath,
 				"--git-branch", branch,
 				"--cluster", params.ClusterName,
 			)
@@ -97,7 +97,7 @@ var _ = Describe("Enable and use GitOps quickstart profiles", func() {
 		It("should add the configured quickstart profile to the repo and the cluster", func() {
 			Expect(err).NotTo(HaveOccurred()) // Creating the branch should have succeeded.
 			// Flux should have been installed by the previously run "enable repo" command:
-			AssertFluxManifestsPresentInGit(branch, params.PrivateSSHKeyPath)
+			AssertFluxManifestsPresentInGit(branch)
 			AssertFluxPodsPresentInKubernetes(params.KubeconfigPath)
 
 			cmd := params.EksctlCmd.WithArgs(
@@ -105,18 +105,17 @@ var _ = Describe("Enable and use GitOps quickstart profiles", func() {
 				"--git-url", git.Repository,
 				"--git-email", git.Email,
 				"--git-branch", branch,
-				"--git-private-ssh-key-path", params.PrivateSSHKeyPath,
 				"--cluster", params.ClusterName,
 				"app-dev",
 			)
 			Expect(cmd).To(RunSuccessfully())
 
-			AssertQuickStartComponentsPresentInGit(branch, params.PrivateSSHKeyPath)
+			AssertQuickStartComponentsPresentInGit(branch)
 			// Flux should still be present:
-			AssertFluxManifestsPresentInGit(branch, params.PrivateSSHKeyPath)
+			AssertFluxManifestsPresentInGit(branch)
 			AssertFluxPodsPresentInKubernetes(params.KubeconfigPath)
 			// Clean-up:
-			err := git.DeleteBranch(branch, cloneDir, params.PrivateSSHKeyPath)
+			err := git.CleanupBranchAndRepo(branch, cloneDir)
 			Expect(err).NotTo(HaveOccurred()) // Deleting the branch should have succeeded.
 		})
 	})

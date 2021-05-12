@@ -14,7 +14,7 @@ import (
 
 // Wait for something with a name to reach status that is expressed by acceptors using newRequest
 // until we hit waitTimeout, on unexpected status troubleshoot will be called with the desired
-// status as an argument, so that it can find what migth have gone wrong
+// status as an argument, so that it can find what might have gone wrong
 func Wait(name, msg string, acceptors []request.WaiterAcceptor, newRequest func() *request.Request, waitTimeout time.Duration, troubleshoot func(string) error) error {
 	desiredStatus := fmt.Sprintf("%v", acceptors[0].Expected)
 	name = strings.Join([]string{"wait", name, desiredStatus}, "_")
@@ -43,7 +43,7 @@ func makeWaiter(ctx context.Context, name, msg string, acceptors []request.Waite
 		Delay:       makeWaiterDelay(),
 		Acceptors:   acceptors,
 		NewRequest: func(_ []request.Option) (*request.Request, error) {
-			logger.Debug(msg)
+			logger.Info(msg)
 			req := newRequest()
 			req.SetContext(ctx)
 			return req, nil
@@ -52,7 +52,7 @@ func makeWaiter(ctx context.Context, name, msg string, acceptors []request.Waite
 }
 
 // MakeAcceptors constructs a slice of request acceptors
-func MakeAcceptors(statusPath string, successStatus string, failureStates []string, extraAcceptors ...request.WaiterAcceptor) []request.WaiterAcceptor {
+func MakeAcceptors(statusPath string, successStatus interface{}, failureStates []string, extraAcceptors ...request.WaiterAcceptor) []request.WaiterAcceptor {
 	acceptors := []request.WaiterAcceptor{makeStatusAcceptor(successStatus, statusPath)}
 	acceptors[0].State = request.SuccessWaiterState
 
@@ -65,12 +65,23 @@ func MakeAcceptors(statusPath string, successStatus string, failureStates []stri
 	return acceptors
 }
 
-func makeStatusAcceptor(status string, statusPath string) request.WaiterAcceptor {
+func makeStatusAcceptor(status interface{}, statusPath string) request.WaiterAcceptor {
 	return request.WaiterAcceptor{
 		Matcher:  request.PathAllWaiterMatch,
 		Argument: statusPath,
 		Expected: status,
 		State:    request.FailureWaiterState,
+	}
+}
+
+// MakeAcceptors constructs a slice of request acceptors for error codes
+func MakeErrorCodeAcceptors(errorCode string) []request.WaiterAcceptor {
+	return []request.WaiterAcceptor{
+		{
+			Matcher:  request.ErrorWaiterMatch,
+			Expected: errorCode,
+			State:    request.SuccessWaiterState,
+		},
 	}
 }
 

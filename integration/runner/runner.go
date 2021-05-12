@@ -2,6 +2,7 @@ package runner
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -20,6 +21,7 @@ type Cmd struct {
 	env      []string
 	cleanEnv bool
 	timeout  time.Duration
+	stdin    io.Reader
 }
 
 // NewCmd constructs a new command
@@ -86,6 +88,12 @@ func (c Cmd) WithTimeout(timeout time.Duration) Cmd {
 	return c
 }
 
+// WithStdin returns a copy of the command with Stdin set
+func (c Cmd) WithStdin(stdin io.Reader) Cmd {
+	c.stdin = stdin
+	return c
+}
+
 // Start the command and returns underlying session
 func (c Cmd) Start() *gexec.Session {
 	command := exec.Command(c.execPath, c.args...)
@@ -96,6 +104,10 @@ func (c Cmd) Start() *gexec.Session {
 		command.Env = os.Environ()
 	}
 	command.Env = append(command.Env, c.env...)
+
+	if c.stdin != nil {
+		command.Stdin = c.stdin
+	}
 
 	fmt.Fprintf(GinkgoWriter, "starting '%s'\n", c.String())
 
@@ -164,7 +176,7 @@ type runCmdOutputMatcher struct {
 	*runCmdMatcher
 }
 
-// RunSuccessfullyWithOutputString matches successful excution of a command and passes the output string
+// RunSuccessfullyWithOutputString matches successful execution of a command and passes the output string
 // to another matcher (the string will include stdout and stderr)
 func RunSuccessfullyWithOutputString(outputMatchers ...types.GomegaMatcher) types.GomegaMatcher {
 	return &runCmdOutputMatcher{
@@ -174,7 +186,7 @@ func RunSuccessfullyWithOutputString(outputMatchers ...types.GomegaMatcher) type
 	}
 }
 
-// RunSuccessfullyWithOutputStringLines matches successful excution of a command and passes the output string
+// RunSuccessfullyWithOutputStringLines matches successful execution of a command and passes the output string
 // to another matcher split into lines (the string will include stdout and stderr)
 func RunSuccessfullyWithOutputStringLines(outputMatchers ...types.GomegaMatcher) types.GomegaMatcher {
 	return &runCmdOutputMatcher{

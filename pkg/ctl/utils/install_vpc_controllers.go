@@ -2,10 +2,10 @@ package utils
 
 import (
 	"github.com/kris-nova/logger"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/weaveworks/eksctl/pkg/addons"
+	"github.com/weaveworks/eksctl/pkg/eks"
+	"github.com/weaveworks/eksctl/pkg/utils/tasks"
 
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/ctl/cmdutils"
@@ -47,27 +47,25 @@ func doInstallWindowsVPCController(cmd *cmdutils.Cmd) error {
 	}
 	logger.Info("using region %s", meta.Region)
 
-	if err := ctl.CheckAuth(); err != nil {
-		return err
-	}
-
 	if ok, err := ctl.CanUpdate(cfg); !ok {
 		return err
 	}
 
-	rawClient, err := ctl.NewRawClient(cfg)
-	if err != nil {
-		return err
+	vpcControllerTask := &eks.VPCControllerTask{
+		Info:            "install Windows VPC controller",
+		ClusterConfig:   cfg,
+		ClusterProvider: ctl,
+		PlanMode:        cmd.Plan,
 	}
 
-	// TODO cmd.Plan doesn't work as intended for all addons
-	vpcController := addons.NewVPCController(rawClient, cfg.Status, ctl.Provider.Region(), cmd.Plan)
+	taskTree := &tasks.TaskTree{
+		Tasks: []tasks.Task{vpcControllerTask},
+	}
 
-	if err := vpcController.Deploy(); err != nil {
-		return errors.Wrap(err, "error installing VPC controller")
+	if errs := taskTree.DoAllSync(); len(errs) > 0 {
+		return errs[0]
 	}
 
 	cmdutils.LogPlanModeWarning(cmd.Plan)
-
 	return nil
 }

@@ -80,9 +80,14 @@ type ClusterIAMServiceAccount struct {
 	// +optional
 	AttachPolicyARNs []string `json:"attachPolicyARNs,omitempty"`
 
+	WellKnownPolicies WellKnownPolicies `json:"wellKnownPolicies,omitempty"`
+
 	// AttachPolicy holds a policy document to attach to this service account
 	// +optional
 	AttachPolicy InlineDocument `json:"attachPolicy,omitempty"`
+
+	// ARN of the role to attach to the service account
+	AttachRoleARN string `json:"attachRoleARN,omitempty"`
 
 	// ARN of the permissions boundary to associate with the service account
 	// +optional
@@ -90,6 +95,14 @@ type ClusterIAMServiceAccount struct {
 
 	// +optional
 	Status *ClusterIAMServiceAccountStatus `json:"status,omitempty"`
+
+	// Specific role name instead of the Cloudformation-generated role name
+	// +optional
+	RoleName string `json:"roleName,omitempty"`
+
+	// Specify if only the IAM Service Account role should be created without creating/annotating the service account
+	// +optional
+	RoleOnly *bool `json:"roleOnly,omitempty"`
 
 	// AWS tags for the service account
 	// +optional

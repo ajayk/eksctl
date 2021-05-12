@@ -11,8 +11,8 @@ import (
 )
 
 // AddCommonCreateNodeGroupFlags adds common flags for creating a nodegroup
-func AddCommonCreateNodeGroupFlags(fs *pflag.FlagSet, cmd *Cmd, ng *api.NodeGroup) {
-	fs.StringVarP(&ng.InstanceType, "node-type", "t", api.DefaultNodeType, "node instance type")
+func AddCommonCreateNodeGroupFlags(fs *pflag.FlagSet, cmd *Cmd, ng *api.NodeGroup, mngOptions *CreateManagedNGOptions) {
+	fs.StringVarP(&ng.InstanceType, "node-type", "t", "", "node instance type")
 
 	desiredCapacity := fs.IntP("nodes", "N", api.DefaultNodeCount, "total number of nodes (for a static ASG)")
 	minSize := fs.IntP("nodes-min", "m", api.DefaultNodeCount, "minimum nodes in ASG")
@@ -37,9 +37,10 @@ func AddCommonCreateNodeGroupFlags(fs *pflag.FlagSet, cmd *Cmd, ng *api.NodeGrou
 
 	ng.SSH.Allow = fs.Bool("ssh-access", *ng.SSH.Allow, "control SSH access for nodes. Uses ~/.ssh/id_rsa.pub as default key path if enabled")
 	ng.SSH.PublicKeyPath = fs.String("ssh-public-key", "", "SSH public key to use for nodes (import from local path, or use existing EC2 key pair)")
+	ng.SSH.EnableSSM = fs.Bool("enable-ssm", false, "Enable AWS Systems Manager (SSM)")
 
-	fs.StringVar(&ng.AMI, "node-ami", "", "'auto-ssm' (default), 'auto', 'static' (deprecated, will be removed in 0.33.0) or an AMI id (advanced use)")
-	fs.StringVar(&ng.AMIFamily, "node-ami-family", api.DefaultNodeImageFamily, "'AmazonLinux2' for the Amazon EKS optimized AMI or 'Ubuntu1804' for the official Canonical EKS AMIs (Ubuntu 18.04)")
+	fs.StringVar(&ng.AMI, "node-ami", "", "'auto-ssm', 'auto' or an AMI ID (advanced use)")
+	fs.StringVar(&ng.AMIFamily, "node-ami-family", api.DefaultNodeImageFamily, "'AmazonLinux2' for the Amazon EKS optimized AMI, or use 'Ubuntu2004' or 'Ubuntu1804' for the official Canonical EKS AMIs")
 
 	fs.BoolVarP(&ng.PrivateNetworking, "node-private-networking", "P", false, "whether to make nodegroup networking private")
 
@@ -52,11 +53,14 @@ func AddCommonCreateNodeGroupFlags(fs *pflag.FlagSet, cmd *Cmd, ng *api.NodeGrou
 	fs.StringVar(&ng.InstanceName, "instance-name", "", "overrides the default instance's name")
 
 	fs.BoolVar(ng.DisablePodIMDS, "disable-pod-imds", false, "Blocks IMDS requests from non host networking pods")
+
+	fs.BoolVarP(&mngOptions.Managed, "managed", "", false, "Create EKS-managed nodegroup")
+	fs.BoolVar(&mngOptions.Spot, "spot", false, "Create a spot nodegroup (managed nodegroups only)")
+	fs.StringSliceVar(&mngOptions.InstanceTypes, "instance-types", nil, "Comma-separated list of instance types (e.g., --instance-types=c3.large,c4.large,c5.large")
 }
 
 func incompatibleManagedNodesFlags() []string {
 	return []string{
-		"node-volume-type",
 		"max-pods-per-node",
 		"node-ami",
 		"node-security-groups",
@@ -64,13 +68,30 @@ func incompatibleManagedNodesFlags() []string {
 }
 
 // AddCommonCreateNodeGroupIAMAddonsFlags adds flags to set ng.IAM.WithAddonPolicies
-func AddCommonCreateNodeGroupIAMAddonsFlags(fs *pflag.FlagSet, ng *api.NodeGroup) {
+func AddCommonCreateNodeGroupAddonsFlags(fs *pflag.FlagSet, ng *api.NodeGroup, options *CreateNGOptions) {
+	addCommonCreateNodeGroupIAMAddonsFlags(fs, ng)
+	fs.BoolVarP(&options.InstallNeuronDevicePlugin, "install-neuron-plugin", "", true, "install Neuron plugin for Inferentia nodes")
+	fs.BoolVarP(&options.InstallNvidiaDevicePlugin, "install-nvidia-plugin", "", true, "install Nvidia plugin for GPU nodes")
+}
+
+// AddInstanceSelectorOptions adds flags for EC2 instance selector
+func AddInstanceSelectorOptions(flagSetGroup *NamedFlagSetGroup, ng *api.NodeGroup) {
+	flagSetGroup.InFlagSet("Instance Selector options", func(fs *pflag.FlagSet) {
+		fs.IntVar(&ng.InstanceSelector.VCPUs, "instance-selector-vcpus", 0, "an integer value (2, 4 etc)")
+		fs.StringVar(&ng.InstanceSelector.Memory, "instance-selector-memory", "", "4 or 4GiB")
+		fs.IntVar(&ng.InstanceSelector.GPUs, "instance-selector-gpus", 0, "an integer value")
+		fs.StringVar(&ng.InstanceSelector.CPUArchitecture, "instance-selector-cpu-architecture", "", "x86_64, or arm64")
+	})
+}
+
+// addCommonCreateNodeGroupIAMAddonsFlags adds flags to set ng.IAM.WithAddonPolicies
+func addCommonCreateNodeGroupIAMAddonsFlags(fs *pflag.FlagSet, ng *api.NodeGroup) {
 	ng.IAM.WithAddonPolicies.AutoScaler = new(bool)
 	ng.IAM.WithAddonPolicies.ExternalDNS = new(bool)
 	ng.IAM.WithAddonPolicies.ImageBuilder = new(bool)
 	ng.IAM.WithAddonPolicies.AppMesh = new(bool)
 	ng.IAM.WithAddonPolicies.AppMeshPreview = new(bool)
-	ng.IAM.WithAddonPolicies.ALBIngress = new(bool)
+	ng.IAM.WithAddonPolicies.AWSLoadBalancerController = new(bool)
 	ng.IAM.WithAddonPolicies.XRay = new(bool)
 	ng.IAM.WithAddonPolicies.CloudWatch = new(bool)
 	fs.BoolVar(ng.IAM.WithAddonPolicies.AutoScaler, "asg-access", false, "enable IAM policy for cluster-autoscaler")
@@ -78,7 +99,7 @@ func AddCommonCreateNodeGroupIAMAddonsFlags(fs *pflag.FlagSet, ng *api.NodeGroup
 	fs.BoolVar(ng.IAM.WithAddonPolicies.ImageBuilder, "full-ecr-access", false, "enable full access to ECR")
 	fs.BoolVar(ng.IAM.WithAddonPolicies.AppMesh, "appmesh-access", false, "enable full access to AppMesh")
 	fs.BoolVar(ng.IAM.WithAddonPolicies.AppMeshPreview, "appmesh-preview-access", false, "enable full access to AppMesh Preview")
-	fs.BoolVar(ng.IAM.WithAddonPolicies.ALBIngress, "alb-ingress-access", false, "enable full access for alb-ingress-controller")
+	fs.BoolVar(ng.IAM.WithAddonPolicies.AWSLoadBalancerController, "alb-ingress-access", false, "enable full access for alb-ingress-controller")
 }
 
 // AddNodeGroupFilterFlags add common `--include` and `--exclude` flags for filtering nodegroups

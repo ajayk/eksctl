@@ -22,6 +22,9 @@ func (c *StackCollection) FixClusterCompatibility() error {
 	if err != nil {
 		return err
 	}
+	if stack == nil {
+		return &StackNotFoundErr{ClusterName: c.spec.Metadata.Name}
+	}
 
 	var (
 		clusterDefaultSG string
@@ -71,12 +74,12 @@ func (c *StackCollection) FixClusterCompatibility() error {
 	}
 
 	logger.Info("adding missing resources to cluster stack")
-	_, err = c.AppendNewClusterStackResource(false, true)
+	_, err = c.AppendNewClusterStackResource(false, stackSupportsManagedNodes)
 	return err
 }
 
 func (c *StackCollection) hasManagedToUnmanagedSG() (bool, error) {
-	stackTemplate, err := c.GetStackTemplate(c.makeClusterStackName())
+	stackTemplate, err := c.GetStackTemplate(c.MakeClusterStackName())
 	if err != nil {
 		return false, errors.Wrap(err, "error getting cluster stack template")
 	}
@@ -89,14 +92,15 @@ func (c *StackCollection) EnsureMapPublicIPOnLaunchEnabled() error {
 	// First, make sure we enable the options in EC2. This is to make sure the settings are applied even
 	// if the stacks in Cloudformation have the setting enabled (since a stack update would produce "nothing to change"
 	// and therefore the setting would not be updated)
-	logger.Debug("enabling attribute MapPublicIpOnLaunch via EC2 on subnets %q", c.spec.PublicSubnetIDs())
-	err := vpc.EnsureMapPublicIPOnLaunchEnabled(c.provider, c.spec.PublicSubnetIDs())
+	publicIDs := c.spec.VPC.Subnets.Public.WithIDs()
+	logger.Debug("enabling attribute MapPublicIpOnLaunch via EC2 on subnets %q", publicIDs)
+	err := vpc.EnsureMapPublicIPOnLaunchEnabled(c.ec2API, publicIDs)
 	if err != nil {
 		return err
 	}
 
 	// Get stack template
-	stackName := c.makeClusterStackName()
+	stackName := c.MakeClusterStackName()
 	currentTemplate, err := c.GetStackTemplate(stackName)
 	if err != nil {
 		return errors.Wrapf(err, "unable to retrieve cluster stack %q", stackName)

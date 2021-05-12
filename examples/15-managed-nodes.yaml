@@ -23,6 +23,13 @@ managedNodeGroups:
       # new feature for restricting SSH access to certain AWS security group IDs
       sourceSecurityGroupIds: ["sg-00241fbb12c607007"]
     labels: {role: worker}
+    # Note: unmanaged nodegroups (`nodeGroups` field) use a different structure (map[string]string) to express taints
+    taints:
+    - key: key1
+      value: value1
+      effect: NoSchedule
+    - key: key2
+      effect: NoExecute
     tags:
       nodegroup-role: worker
     iam:
@@ -41,7 +48,8 @@ managedNodeGroups:
       # disable hyperthreading
       - "for n in $(cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list | cut -s -d, -f2- | tr ',' '\n' | sort -un); do echo 0 > /sys/devices/system/cpu/cpu${n}/online; done"
     overrideBootstrapCommand: |
-      /etc/eks/bootstrap.sh custom-ami
+      #!/bin/bash
+      /etc/eks/bootstrap.sh cluster-15
 
   - name: custom-launch-template
     launchTemplate:

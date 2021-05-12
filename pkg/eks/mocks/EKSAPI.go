@@ -17,6 +17,240 @@ type EKSAPI struct {
 	mock.Mock
 }
 
+// AssociateEncryptionConfig provides a mock function with given fields: _a0
+func (_m *EKSAPI) AssociateEncryptionConfig(_a0 *eks.AssociateEncryptionConfigInput) (*eks.AssociateEncryptionConfigOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.AssociateEncryptionConfigOutput
+	if rf, ok := ret.Get(0).(func(*eks.AssociateEncryptionConfigInput) *eks.AssociateEncryptionConfigOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.AssociateEncryptionConfigOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.AssociateEncryptionConfigInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AssociateEncryptionConfigRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) AssociateEncryptionConfigRequest(_a0 *eks.AssociateEncryptionConfigInput) (*request.Request, *eks.AssociateEncryptionConfigOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.AssociateEncryptionConfigInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.AssociateEncryptionConfigOutput
+	if rf, ok := ret.Get(1).(func(*eks.AssociateEncryptionConfigInput) *eks.AssociateEncryptionConfigOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.AssociateEncryptionConfigOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// AssociateEncryptionConfigWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) AssociateEncryptionConfigWithContext(_a0 context.Context, _a1 *eks.AssociateEncryptionConfigInput, _a2 ...request.Option) (*eks.AssociateEncryptionConfigOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.AssociateEncryptionConfigOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.AssociateEncryptionConfigInput, ...request.Option) *eks.AssociateEncryptionConfigOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.AssociateEncryptionConfigOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.AssociateEncryptionConfigInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AssociateIdentityProviderConfig provides a mock function with given fields: _a0
+func (_m *EKSAPI) AssociateIdentityProviderConfig(_a0 *eks.AssociateIdentityProviderConfigInput) (*eks.AssociateIdentityProviderConfigOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.AssociateIdentityProviderConfigOutput
+	if rf, ok := ret.Get(0).(func(*eks.AssociateIdentityProviderConfigInput) *eks.AssociateIdentityProviderConfigOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.AssociateIdentityProviderConfigOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.AssociateIdentityProviderConfigInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AssociateIdentityProviderConfigRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) AssociateIdentityProviderConfigRequest(_a0 *eks.AssociateIdentityProviderConfigInput) (*request.Request, *eks.AssociateIdentityProviderConfigOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.AssociateIdentityProviderConfigInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.AssociateIdentityProviderConfigOutput
+	if rf, ok := ret.Get(1).(func(*eks.AssociateIdentityProviderConfigInput) *eks.AssociateIdentityProviderConfigOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.AssociateIdentityProviderConfigOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// AssociateIdentityProviderConfigWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) AssociateIdentityProviderConfigWithContext(_a0 context.Context, _a1 *eks.AssociateIdentityProviderConfigInput, _a2 ...request.Option) (*eks.AssociateIdentityProviderConfigOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.AssociateIdentityProviderConfigOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.AssociateIdentityProviderConfigInput, ...request.Option) *eks.AssociateIdentityProviderConfigOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.AssociateIdentityProviderConfigOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.AssociateIdentityProviderConfigInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateAddon provides a mock function with given fields: _a0
+func (_m *EKSAPI) CreateAddon(_a0 *eks.CreateAddonInput) (*eks.CreateAddonOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.CreateAddonOutput
+	if rf, ok := ret.Get(0).(func(*eks.CreateAddonInput) *eks.CreateAddonOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.CreateAddonOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.CreateAddonInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateAddonRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) CreateAddonRequest(_a0 *eks.CreateAddonInput) (*request.Request, *eks.CreateAddonOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.CreateAddonInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.CreateAddonOutput
+	if rf, ok := ret.Get(1).(func(*eks.CreateAddonInput) *eks.CreateAddonOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.CreateAddonOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateAddonWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) CreateAddonWithContext(_a0 context.Context, _a1 *eks.CreateAddonInput, _a2 ...request.Option) (*eks.CreateAddonOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.CreateAddonOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.CreateAddonInput, ...request.Option) *eks.CreateAddonOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.CreateAddonOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.CreateAddonInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateCluster provides a mock function with given fields: _a0
 func (_m *EKSAPI) CreateCluster(_a0 *eks.CreateClusterInput) (*eks.CreateClusterOutput, error) {
 	ret := _m.Called(_a0)
@@ -243,6 +477,84 @@ func (_m *EKSAPI) CreateNodegroupWithContext(_a0 context.Context, _a1 *eks.Creat
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *eks.CreateNodegroupInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteAddon provides a mock function with given fields: _a0
+func (_m *EKSAPI) DeleteAddon(_a0 *eks.DeleteAddonInput) (*eks.DeleteAddonOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.DeleteAddonOutput
+	if rf, ok := ret.Get(0).(func(*eks.DeleteAddonInput) *eks.DeleteAddonOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DeleteAddonOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.DeleteAddonInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteAddonRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) DeleteAddonRequest(_a0 *eks.DeleteAddonInput) (*request.Request, *eks.DeleteAddonOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.DeleteAddonInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.DeleteAddonOutput
+	if rf, ok := ret.Get(1).(func(*eks.DeleteAddonInput) *eks.DeleteAddonOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.DeleteAddonOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteAddonWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) DeleteAddonWithContext(_a0 context.Context, _a1 *eks.DeleteAddonInput, _a2 ...request.Option) (*eks.DeleteAddonOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.DeleteAddonOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.DeleteAddonInput, ...request.Option) *eks.DeleteAddonOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DeleteAddonOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.DeleteAddonInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -485,6 +797,197 @@ func (_m *EKSAPI) DeleteNodegroupWithContext(_a0 context.Context, _a1 *eks.Delet
 	return r0, r1
 }
 
+// DescribeAddon provides a mock function with given fields: _a0
+func (_m *EKSAPI) DescribeAddon(_a0 *eks.DescribeAddonInput) (*eks.DescribeAddonOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.DescribeAddonOutput
+	if rf, ok := ret.Get(0).(func(*eks.DescribeAddonInput) *eks.DescribeAddonOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DescribeAddonOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.DescribeAddonInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAddonRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) DescribeAddonRequest(_a0 *eks.DescribeAddonInput) (*request.Request, *eks.DescribeAddonOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.DescribeAddonInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.DescribeAddonOutput
+	if rf, ok := ret.Get(1).(func(*eks.DescribeAddonInput) *eks.DescribeAddonOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.DescribeAddonOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeAddonVersions provides a mock function with given fields: _a0
+func (_m *EKSAPI) DescribeAddonVersions(_a0 *eks.DescribeAddonVersionsInput) (*eks.DescribeAddonVersionsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.DescribeAddonVersionsOutput
+	if rf, ok := ret.Get(0).(func(*eks.DescribeAddonVersionsInput) *eks.DescribeAddonVersionsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DescribeAddonVersionsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.DescribeAddonVersionsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAddonVersionsPages provides a mock function with given fields: _a0, _a1
+func (_m *EKSAPI) DescribeAddonVersionsPages(_a0 *eks.DescribeAddonVersionsInput, _a1 func(*eks.DescribeAddonVersionsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*eks.DescribeAddonVersionsInput, func(*eks.DescribeAddonVersionsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeAddonVersionsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EKSAPI) DescribeAddonVersionsPagesWithContext(_a0 context.Context, _a1 *eks.DescribeAddonVersionsInput, _a2 func(*eks.DescribeAddonVersionsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.DescribeAddonVersionsInput, func(*eks.DescribeAddonVersionsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeAddonVersionsRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) DescribeAddonVersionsRequest(_a0 *eks.DescribeAddonVersionsInput) (*request.Request, *eks.DescribeAddonVersionsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.DescribeAddonVersionsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.DescribeAddonVersionsOutput
+	if rf, ok := ret.Get(1).(func(*eks.DescribeAddonVersionsInput) *eks.DescribeAddonVersionsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.DescribeAddonVersionsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeAddonVersionsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) DescribeAddonVersionsWithContext(_a0 context.Context, _a1 *eks.DescribeAddonVersionsInput, _a2 ...request.Option) (*eks.DescribeAddonVersionsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.DescribeAddonVersionsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.DescribeAddonVersionsInput, ...request.Option) *eks.DescribeAddonVersionsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DescribeAddonVersionsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.DescribeAddonVersionsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAddonWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) DescribeAddonWithContext(_a0 context.Context, _a1 *eks.DescribeAddonInput, _a2 ...request.Option) (*eks.DescribeAddonOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.DescribeAddonOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.DescribeAddonInput, ...request.Option) *eks.DescribeAddonOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DescribeAddonOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.DescribeAddonInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeCluster provides a mock function with given fields: _a0
 func (_m *EKSAPI) DescribeCluster(_a0 *eks.DescribeClusterInput) (*eks.DescribeClusterOutput, error) {
 	ret := _m.Called(_a0)
@@ -641,6 +1144,84 @@ func (_m *EKSAPI) DescribeFargateProfileWithContext(_a0 context.Context, _a1 *ek
 	return r0, r1
 }
 
+// DescribeIdentityProviderConfig provides a mock function with given fields: _a0
+func (_m *EKSAPI) DescribeIdentityProviderConfig(_a0 *eks.DescribeIdentityProviderConfigInput) (*eks.DescribeIdentityProviderConfigOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.DescribeIdentityProviderConfigOutput
+	if rf, ok := ret.Get(0).(func(*eks.DescribeIdentityProviderConfigInput) *eks.DescribeIdentityProviderConfigOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DescribeIdentityProviderConfigOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.DescribeIdentityProviderConfigInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeIdentityProviderConfigRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) DescribeIdentityProviderConfigRequest(_a0 *eks.DescribeIdentityProviderConfigInput) (*request.Request, *eks.DescribeIdentityProviderConfigOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.DescribeIdentityProviderConfigInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.DescribeIdentityProviderConfigOutput
+	if rf, ok := ret.Get(1).(func(*eks.DescribeIdentityProviderConfigInput) *eks.DescribeIdentityProviderConfigOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.DescribeIdentityProviderConfigOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeIdentityProviderConfigWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) DescribeIdentityProviderConfigWithContext(_a0 context.Context, _a1 *eks.DescribeIdentityProviderConfigInput, _a2 ...request.Option) (*eks.DescribeIdentityProviderConfigOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.DescribeIdentityProviderConfigOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.DescribeIdentityProviderConfigInput, ...request.Option) *eks.DescribeIdentityProviderConfigOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DescribeIdentityProviderConfigOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.DescribeIdentityProviderConfigInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeNodegroup provides a mock function with given fields: _a0
 func (_m *EKSAPI) DescribeNodegroup(_a0 *eks.DescribeNodegroupInput) (*eks.DescribeNodegroupOutput, error) {
 	ret := _m.Called(_a0)
@@ -789,6 +1370,197 @@ func (_m *EKSAPI) DescribeUpdateWithContext(_a0 context.Context, _a1 *eks.Descri
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *eks.DescribeUpdateInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DisassociateIdentityProviderConfig provides a mock function with given fields: _a0
+func (_m *EKSAPI) DisassociateIdentityProviderConfig(_a0 *eks.DisassociateIdentityProviderConfigInput) (*eks.DisassociateIdentityProviderConfigOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.DisassociateIdentityProviderConfigOutput
+	if rf, ok := ret.Get(0).(func(*eks.DisassociateIdentityProviderConfigInput) *eks.DisassociateIdentityProviderConfigOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DisassociateIdentityProviderConfigOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.DisassociateIdentityProviderConfigInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DisassociateIdentityProviderConfigRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) DisassociateIdentityProviderConfigRequest(_a0 *eks.DisassociateIdentityProviderConfigInput) (*request.Request, *eks.DisassociateIdentityProviderConfigOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.DisassociateIdentityProviderConfigInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.DisassociateIdentityProviderConfigOutput
+	if rf, ok := ret.Get(1).(func(*eks.DisassociateIdentityProviderConfigInput) *eks.DisassociateIdentityProviderConfigOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.DisassociateIdentityProviderConfigOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DisassociateIdentityProviderConfigWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) DisassociateIdentityProviderConfigWithContext(_a0 context.Context, _a1 *eks.DisassociateIdentityProviderConfigInput, _a2 ...request.Option) (*eks.DisassociateIdentityProviderConfigOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.DisassociateIdentityProviderConfigOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.DisassociateIdentityProviderConfigInput, ...request.Option) *eks.DisassociateIdentityProviderConfigOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.DisassociateIdentityProviderConfigOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.DisassociateIdentityProviderConfigInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListAddons provides a mock function with given fields: _a0
+func (_m *EKSAPI) ListAddons(_a0 *eks.ListAddonsInput) (*eks.ListAddonsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.ListAddonsOutput
+	if rf, ok := ret.Get(0).(func(*eks.ListAddonsInput) *eks.ListAddonsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.ListAddonsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.ListAddonsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListAddonsPages provides a mock function with given fields: _a0, _a1
+func (_m *EKSAPI) ListAddonsPages(_a0 *eks.ListAddonsInput, _a1 func(*eks.ListAddonsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*eks.ListAddonsInput, func(*eks.ListAddonsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListAddonsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EKSAPI) ListAddonsPagesWithContext(_a0 context.Context, _a1 *eks.ListAddonsInput, _a2 func(*eks.ListAddonsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.ListAddonsInput, func(*eks.ListAddonsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListAddonsRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) ListAddonsRequest(_a0 *eks.ListAddonsInput) (*request.Request, *eks.ListAddonsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.ListAddonsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.ListAddonsOutput
+	if rf, ok := ret.Get(1).(func(*eks.ListAddonsInput) *eks.ListAddonsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.ListAddonsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListAddonsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) ListAddonsWithContext(_a0 context.Context, _a1 *eks.ListAddonsInput, _a2 ...request.Option) (*eks.ListAddonsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.ListAddonsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.ListAddonsInput, ...request.Option) *eks.ListAddonsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.ListAddonsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.ListAddonsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -1015,6 +1787,119 @@ func (_m *EKSAPI) ListFargateProfilesWithContext(_a0 context.Context, _a1 *eks.L
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *eks.ListFargateProfilesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListIdentityProviderConfigs provides a mock function with given fields: _a0
+func (_m *EKSAPI) ListIdentityProviderConfigs(_a0 *eks.ListIdentityProviderConfigsInput) (*eks.ListIdentityProviderConfigsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.ListIdentityProviderConfigsOutput
+	if rf, ok := ret.Get(0).(func(*eks.ListIdentityProviderConfigsInput) *eks.ListIdentityProviderConfigsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.ListIdentityProviderConfigsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.ListIdentityProviderConfigsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListIdentityProviderConfigsPages provides a mock function with given fields: _a0, _a1
+func (_m *EKSAPI) ListIdentityProviderConfigsPages(_a0 *eks.ListIdentityProviderConfigsInput, _a1 func(*eks.ListIdentityProviderConfigsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*eks.ListIdentityProviderConfigsInput, func(*eks.ListIdentityProviderConfigsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListIdentityProviderConfigsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *EKSAPI) ListIdentityProviderConfigsPagesWithContext(_a0 context.Context, _a1 *eks.ListIdentityProviderConfigsInput, _a2 func(*eks.ListIdentityProviderConfigsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.ListIdentityProviderConfigsInput, func(*eks.ListIdentityProviderConfigsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListIdentityProviderConfigsRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) ListIdentityProviderConfigsRequest(_a0 *eks.ListIdentityProviderConfigsInput) (*request.Request, *eks.ListIdentityProviderConfigsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.ListIdentityProviderConfigsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.ListIdentityProviderConfigsOutput
+	if rf, ok := ret.Get(1).(func(*eks.ListIdentityProviderConfigsInput) *eks.ListIdentityProviderConfigsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.ListIdentityProviderConfigsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListIdentityProviderConfigsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) ListIdentityProviderConfigsWithContext(_a0 context.Context, _a1 *eks.ListIdentityProviderConfigsInput, _a2 ...request.Option) (*eks.ListIdentityProviderConfigsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.ListIdentityProviderConfigsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.ListIdentityProviderConfigsInput, ...request.Option) *eks.ListIdentityProviderConfigsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.ListIdentityProviderConfigsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.ListIdentityProviderConfigsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -1483,6 +2368,84 @@ func (_m *EKSAPI) UntagResourceWithContext(_a0 context.Context, _a1 *eks.UntagRe
 	return r0, r1
 }
 
+// UpdateAddon provides a mock function with given fields: _a0
+func (_m *EKSAPI) UpdateAddon(_a0 *eks.UpdateAddonInput) (*eks.UpdateAddonOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *eks.UpdateAddonOutput
+	if rf, ok := ret.Get(0).(func(*eks.UpdateAddonInput) *eks.UpdateAddonOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.UpdateAddonOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*eks.UpdateAddonInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateAddonRequest provides a mock function with given fields: _a0
+func (_m *EKSAPI) UpdateAddonRequest(_a0 *eks.UpdateAddonInput) (*request.Request, *eks.UpdateAddonOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*eks.UpdateAddonInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *eks.UpdateAddonOutput
+	if rf, ok := ret.Get(1).(func(*eks.UpdateAddonInput) *eks.UpdateAddonOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*eks.UpdateAddonOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// UpdateAddonWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) UpdateAddonWithContext(_a0 context.Context, _a1 *eks.UpdateAddonInput, _a2 ...request.Option) (*eks.UpdateAddonOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *eks.UpdateAddonOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.UpdateAddonInput, ...request.Option) *eks.UpdateAddonOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eks.UpdateAddonOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eks.UpdateAddonInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UpdateClusterConfig provides a mock function with given fields: _a0
 func (_m *EKSAPI) UpdateClusterConfig(_a0 *eks.UpdateClusterConfigInput) (*eks.UpdateClusterConfigOutput, error) {
 	ret := _m.Called(_a0)
@@ -1793,6 +2756,76 @@ func (_m *EKSAPI) UpdateNodegroupVersionWithContext(_a0 context.Context, _a1 *ek
 	}
 
 	return r0, r1
+}
+
+// WaitUntilAddonActive provides a mock function with given fields: _a0
+func (_m *EKSAPI) WaitUntilAddonActive(_a0 *eks.DescribeAddonInput) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*eks.DescribeAddonInput) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// WaitUntilAddonActiveWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) WaitUntilAddonActiveWithContext(_a0 context.Context, _a1 *eks.DescribeAddonInput, _a2 ...request.WaiterOption) error {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.DescribeAddonInput, ...request.WaiterOption) error); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// WaitUntilAddonDeleted provides a mock function with given fields: _a0
+func (_m *EKSAPI) WaitUntilAddonDeleted(_a0 *eks.DescribeAddonInput) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*eks.DescribeAddonInput) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// WaitUntilAddonDeletedWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *EKSAPI) WaitUntilAddonDeletedWithContext(_a0 context.Context, _a1 *eks.DescribeAddonInput, _a2 ...request.WaiterOption) error {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *eks.DescribeAddonInput, ...request.WaiterOption) error); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // WaitUntilClusterActive provides a mock function with given fields: _a0

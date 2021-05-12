@@ -1,3 +1,4 @@
+// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
 package enable
 
 import (
@@ -212,7 +213,7 @@ var _ = Describe("enable profile", func() {
 			cmd := newMockEnableProfileCmd("profile", "-f", configFile)
 			_, err := cmd.Execute()
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("git.repo.URL must be set"))
+			Expect(err.Error()).To(Equal("git.repo.url must be set"))
 		})
 
 		It("fails without a git url", func() {
@@ -222,7 +223,7 @@ var _ = Describe("enable profile", func() {
 			cmd := newMockEnableProfileCmd("profile", "-f", configFile)
 			_, err := cmd.Execute()
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("git.repo.URL must be set"))
+			Expect(err.Error()).To(Equal("git.repo.url must be set"))
 		})
 
 		It("fails without a user email", func() {

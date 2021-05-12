@@ -68,6 +68,7 @@ var _ = Describe("create cluster", func() {
 			Entry("with max-pods-per-node flag", "--max-pods-per-node", "20"),
 			Entry("with ssh-access flag", "--ssh-access", "true"),
 			Entry("with ssh-public-key flag", "--ssh-public-key", "dummy-public-key"),
+			Entry("with enable-ssm flag", "--enable-ssm"),
 			Entry("with node-ami flag", "--node-ami", "ami-dummy-123"),
 			Entry("with node-ami-family flag", "--node-ami-family", "AmazonLinux2"),
 			Entry("with node-private-networking flag", "--node-private-networking", "true"),
@@ -88,15 +89,15 @@ var _ = Describe("create cluster", func() {
 				cmd := newDefaultCmd(commandArgs...)
 				_, err := cmd.execute()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(c.error.Error()))
+				Expect(err.Error()).To(ContainSubstring(c.error.Error()))
 			},
 			Entry("with cluster name as argument and flag", invalidParamsCase{
 				args:  []string{"clusterName", "--name", "clusterName"},
-				error: fmt.Errorf("--name=clusterName and argument clusterName cannot be used at the same time"),
+				error: fmt.Errorf("Error: --name=clusterName and argument clusterName cannot be used at the same time"),
 			}),
 			Entry("with invalid flags", invalidParamsCase{
 				args:  []string{"cluster", "--invalid", "dummy"},
-				error: fmt.Errorf("unknown flag: --invalid"),
+				error: fmt.Errorf("Error: unknown flag: --invalid"),
 			}),
 		)
 	})
@@ -140,6 +141,7 @@ var _ = Describe("create cluster", func() {
 			Entry("with node-volume-size flag", "--node-volume-size", "2"),
 			Entry("with ssh-access flag", "--ssh-access", "true"),
 			Entry("with ssh-public-key flag", "--ssh-public-key", "dummy-public-key"),
+			Entry("with enable-ssm flag", "--enable-ssm"),
 			Entry("with node-ami-family flag", "--node-ami-family", "AmazonLinux2"),
 			Entry("with node-private-networking flag", "--node-private-networking", "true"),
 			Entry("with node-labels flag", "--node-labels", "partition=backend,nodeclass=hugememory"),
@@ -157,9 +159,8 @@ var _ = Describe("create cluster", func() {
 				cmd := newDefaultCmd(commandArgs...)
 				_, err := cmd.execute()
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(Equal(fmt.Errorf("%s is not supported for Managed Nodegroups (--managed=true)", args[0])))
+				Expect(err.Error()).To(ContainSubstring(fmt.Errorf("Error: %s is not supported for Managed Nodegroups (--managed=true)", args[0]).Error()))
 			},
-			Entry("node-volume-type", "--node-volume-type", "gp2"),
 			Entry("max-pods-per-node", "--max-pods-per-node", "2"),
 			Entry("node-ami", "--node-ami", "ami-dummy-123"),
 			Entry("node-security-groups", "--node-security-groups", "sg-123"),
@@ -171,15 +172,15 @@ var _ = Describe("create cluster", func() {
 				cmd := newDefaultCmd(commandArgs...)
 				_, err := cmd.execute()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(c.error.Error()))
+				Expect(err.Error()).To(ContainSubstring(c.error.Error()))
 			},
 			Entry("with cluster name as argument and flag", invalidParamsCase{
 				args:  []string{"clusterName", "--name", "clusterName"},
-				error: fmt.Errorf("--name=clusterName and argument clusterName cannot be used at the same time"),
+				error: fmt.Errorf("Error: --name=clusterName and argument clusterName cannot be used at the same time"),
 			}),
 			Entry("with invalid flags", invalidParamsCase{
 				args:  []string{"cluster", "--invalid", "dummy"},
-				error: fmt.Errorf("unknown flag: --invalid"),
+				error: fmt.Errorf("Error: unknown flag: --invalid"),
 			}),
 		)
 	})

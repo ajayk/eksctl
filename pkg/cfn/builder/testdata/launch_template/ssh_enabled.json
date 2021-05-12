@@ -3,7 +3,17 @@
         "Type": "AWS::EC2::LaunchTemplate",
         "Properties": {
             "LaunchTemplateData": {
-                "InstanceType": "m5.large",
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "Iops": 3000,
+                            "Throughput": 125,
+                            "VolumeSize": 80,
+                            "VolumeType": "gp3"
+                        }
+                    }
+                ],
                 "KeyName": "test-keypair",
                 "MetadataOptions": {
                     "HttpPutResponseHopLimit": 2,
@@ -34,8 +44,26 @@
                                 "Value": "managed"
                             }
                         ]
-                    }
-                ]
+                    },
+                  {
+                    "ResourceType": "volume",
+                    "Tags": [
+                      {
+                        "Key": "Name",
+                        "Value": "lt-ssh-enabled-Node"
+                      },
+                      {
+                        "Key": "alpha.eksctl.io/nodegroup-name",
+                        "Value": "ssh-enabled"
+                      },
+                      {
+                        "Key": "alpha.eksctl.io/nodegroup-type",
+                        "Value": "managed"
+                      }
+                    ]
+                  }
+                ],
+              "UserData": "TUlNRS1WZXJzaW9uOiAxLjANCkNvbnRlbnQtVHlwZTogbXVsdGlwYXJ0L21peGVkOyBib3VuZGFyeT0vLw0KDQotLS8vDQpDb250ZW50LVR5cGU6IHRleHQveC1zaGVsbHNjcmlwdA0KQ29udGVudC1UeXBlOiBjaGFyc2V0PSJ1cy1hc2NpaSINCg0KIyEvYmluL2Jhc2gKCnNldCAtbyBlcnJleGl0CnNldCAtbyBwaXBlZmFpbApzZXQgLW8gbm91bnNldAoKeXVtIGluc3RhbGwgLXkgYW1hem9uLXNzbS1hZ2VudApzeXN0ZW1jdGwgZW5hYmxlIGFtYXpvbi1zc20tYWdlbnQKc3lzdGVtY3RsIHN0YXJ0IGFtYXpvbi1zc20tYWdlbnQKDQotLS8vLS0NCg=="
             },
             "LaunchTemplateName": {
                 "Fn::Sub": "${AWS::StackName}"
@@ -51,6 +79,7 @@
                 "alpha.eksctl.io/cluster-name": "lt",
                 "alpha.eksctl.io/nodegroup-name": "ssh-enabled"
             },
+            "InstanceTypes": ["m5.large"],
             "NodeRole": {
                 "Fn::GetAtt": [
                     "NodeInstanceRole",
@@ -118,6 +147,9 @@
                 },
                 {
                     "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AmazonEKS_CNI_Policy"
+                },
+                {
+                    "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
                 }
             ],
             "Path": "/",
@@ -143,13 +175,15 @@
                     "CidrIp": "0.0.0.0/0",
                     "FromPort": 22,
                     "IpProtocol": "tcp",
-                    "ToPort": 22
+                    "ToPort": 22,
+                    "Description": "Allow SSH access to managed worker nodes in group ssh-enabled"
                 },
                 {
                     "CidrIpv6": "::/0",
                     "FromPort": 22,
                     "IpProtocol": "tcp",
-                    "ToPort": 22
+                    "ToPort": 22,
+                    "Description": "Allow SSH access to managed worker nodes in group ssh-enabled"
                 }
             ],
             "Tags": [

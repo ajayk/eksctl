@@ -9,13 +9,14 @@ import (
 
 	cfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	awsiam "github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/cfn/outputs"
 )
 
 // ImportInstanceRoleFromProfileARN fetches first role ARN from instance profile
-func ImportInstanceRoleFromProfileARN(provider api.ClusterProvider, ng *api.NodeGroup, profileARN string) error {
+func ImportInstanceRoleFromProfileARN(iamAPI iamiface.IAMAPI, ng *api.NodeGroup, profileARN string) error {
 	partsOfProfileARN := strings.Split(profileARN, "/")
 
 	if len(partsOfProfileARN) != 2 {
@@ -25,7 +26,7 @@ func ImportInstanceRoleFromProfileARN(provider api.ClusterProvider, ng *api.Node
 	input := &awsiam.GetInstanceProfileInput{
 		InstanceProfileName: &profileName,
 	}
-	output, err := provider.IAM().GetInstanceProfile(input)
+	output, err := iamAPI.GetInstanceProfile(input)
 	if err != nil {
 		return errors.Wrap(err, "importing instance role ARN")
 	}

@@ -18,10 +18,12 @@ func Command(flagGrouping *cmdutils.FlagGrouping) *cobra.Command {
 
 	cmdutils.AddResourceCmd(flagGrouping, verbCmd, getClusterCmd)
 	cmdutils.AddResourceCmd(flagGrouping, verbCmd, getNodeGroupCmd)
+	cmdutils.AddResourceCmd(flagGrouping, verbCmd, getIdentityProvider)
 	cmdutils.AddResourceCmd(flagGrouping, verbCmd, getIAMServiceAccountCmd)
 	cmdutils.AddResourceCmd(flagGrouping, verbCmd, getIAMIdentityMappingCmd)
 	cmdutils.AddResourceCmd(flagGrouping, verbCmd, getLabelsCmd)
 	cmdutils.AddResourceCmd(flagGrouping, verbCmd, getFargateProfile)
+	cmdutils.AddResourceCmd(flagGrouping, verbCmd, getAddonCmd)
 
 	return verbCmd
 }

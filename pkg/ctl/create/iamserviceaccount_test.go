@@ -31,7 +31,7 @@ var _ = Describe("create iamserviceaccount", func() {
 			Expect(count).To(Equal(1))
 		},
 		Entry("with all required flags", "--cluster", "clusterName", "--name", "serviceAccountName", "--attach-policy-arn", "dummyPolicyArn"),
-		Entry("with override flags", "--cluster", "clusterName", "--name", "serviceAccountName", "--attach-policy-arn", "dummyPolicyArn", "--override-existing-serviceaccounts"),
+		Entry("with optional flags", "--cluster", "clusterName", "--name", "serviceAccountName", "--attach-policy-arn", "dummyPolicyArn", "--override-existing-serviceaccounts", "--role-name", "custom-role-name"),
 	)
 
 	DescribeTable("invalid flags or arguments",
@@ -39,23 +39,35 @@ var _ = Describe("create iamserviceaccount", func() {
 			cmd := newDefaultCmd(c.args...)
 			_, err := cmd.execute()
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal(c.error.Error()))
+			Expect(err.Error()).To(ContainSubstring(c.error.Error()))
 		},
 		Entry("without cluster name", invalidParamsCase{
 			args:  []string{"iamserviceaccount", "--name", "serviceAccountName"},
-			error: fmt.Errorf("--cluster must be set"),
+			error: fmt.Errorf("Error: --cluster must be set"),
 		}),
 		Entry("with iamserviceaccount name as argument and flag", invalidParamsCase{
 			args:  []string{"iamserviceaccount", "--cluster", "clusterName", "--name", "serviceAccountName", "serviceAccountName"},
-			error: fmt.Errorf("--name=serviceAccountName and argument serviceAccountName cannot be used at the same time"),
+			error: fmt.Errorf("Error: --name=serviceAccountName and argument serviceAccountName cannot be used at the same time"),
 		}),
-		Entry("without required flag --attach-policy-arn", invalidParamsCase{
+		Entry("without required flags --attach-policy-arn or --attach-policy-role", invalidParamsCase{
 			args:  []string{"iamserviceaccount", "--cluster", "clusterName", "serviceAccountName"},
-			error: fmt.Errorf("--attach-policy-arn must be set"),
+			error: fmt.Errorf("Error: --attach-policy-arn or --attach-role-arn must be set"),
+		}),
+		Entry("with --attach-role-arn and --role-name", invalidParamsCase{
+			args:  []string{"iamserviceaccount", "--cluster", "clusterName", "serviceAccountName", "--role-name", "foo", "--attach-role-arn", "123"},
+			error: fmt.Errorf("cannot provde --role-name or --role-only when --attach-role-arn is configured"),
+		}),
+		Entry("with --attach-policy-role and --role-only", invalidParamsCase{
+			args:  []string{"iamserviceaccount", "--cluster", "clusterName", "serviceAccountName", "--role-only", "--attach-role-arn", "123"},
+			error: fmt.Errorf("cannot provde --role-name or --role-only when --attach-role-arn is configured"),
+		}),
+		Entry("with --attach-role-arn and --attach-policy-arns", invalidParamsCase{
+			args:  []string{"iamserviceaccount", "--cluster", "clusterName", "serviceAccountName", "--attach-policy-arn", "123", "--attach-role-arn", "123"},
+			error: fmt.Errorf("cannot provide --attach-role-arn and specify polices to attach"),
 		}),
 		Entry("with invalid flags", invalidParamsCase{
 			args:  []string{"iamserviceaccount", "--invalid", "dummy"},
-			error: fmt.Errorf("unknown flag: --invalid"),
+			error: fmt.Errorf("Error: unknown flag: --invalid"),
 		}),
 	)
 })

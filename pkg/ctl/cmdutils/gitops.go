@@ -3,6 +3,7 @@ package cmdutils
 import (
 	"fmt"
 
+	"github.com/kris-nova/logger"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -19,12 +20,14 @@ const (
 	gitEmail             = "git-email"
 	gitPrivateSSHKeyPath = "git-private-ssh-key-path"
 
-	gitPaths    = "git-paths"
-	gitFluxPath = "git-flux-subdir"
-	gitLabel    = "git-label"
-	namespace   = "namespace"
-	readOnly    = "read-only"
-	withHelm    = "with-helm"
+	gitPaths                   = "git-paths"
+	gitFluxPath                = "git-flux-subdir"
+	gitLabel                   = "git-label"
+	namespace                  = "namespace"
+	readOnly                   = "read-only"
+	withHelm                   = "with-helm"
+	additionalFluxArgs         = "additional-flux-args"
+	additionalHelmOperatorArgs = "additional-helm-operator-args"
 
 	commitOperatorManifests = "commit-operator-manifests"
 
@@ -32,19 +35,11 @@ const (
 	profileRevision = "profile-revision"
 )
 
-// Options holds options to interact with a Git repository.
-type Options struct {
-	URL               string
-	Branch            string
-	User              string
-	Email             string
-	PrivateSSHKeyPath string
-}
-
+// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
 // AddCommonFlagsForFlux configures the flags required to install Flux on an
 // EKS cluster and have it point to the specified Git repository.
 func AddCommonFlagsForFlux(fs *pflag.FlagSet, opts *api.Git) {
-	AddCommonFlagsForGit(fs, opts.Repo)
+	AddCommonFlagsForGitRepo(fs, opts.Repo)
 
 	fs.StringSliceVar(&opts.Repo.Paths, gitPaths, []string{},
 		"Relative paths within the Git repo for Flux to locate Kubernetes manifests")
@@ -59,11 +54,16 @@ func AddCommonFlagsForFlux(fs *pflag.FlagSet, opts *api.Git) {
 	opts.Operator.CommitOperatorManifests = fs.Bool(commitOperatorManifests, true,
 		"Commit and push Flux manifests to the Git repo on install")
 	opts.Operator.WithHelm = fs.Bool(withHelm, true, "Install the Helm Operator")
+	fs.StringSliceVar(&opts.Operator.AdditionalFluxArgs, additionalFluxArgs, []string{},
+		"Additional command line arguments for the Flux daemon")
+	fs.StringSliceVar(&opts.Operator.AdditionalHelmOperatorArgs, additionalHelmOperatorArgs, []string{},
+		"Additional command line arguments for the Helm Operator")
 }
 
-// AddCommonFlagsForGit configures the flags required to interact with a Git
+// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
+// AddCommonFlagsForGitRepo configures the flags required to interact with a Git
 // repository.
-func AddCommonFlagsForGit(fs *pflag.FlagSet, repo *api.Repo) {
+func AddCommonFlagsForGitRepo(fs *pflag.FlagSet, repo *api.Repo) {
 	fs.StringVar(&repo.URL, gitURL, "",
 		"SSH URL of the Git repository to be used for GitOps, e.g. git@github.com:<github_org>/<repo_name>")
 	fs.StringVar(&repo.Branch, gitBranch, "master",
@@ -84,9 +84,10 @@ func AddCommonFlagsForProfile(fs *pflag.FlagSet, opts *api.Profile) {
 	fs.StringVarP(&opts.Revision, profileRevision, "", "master", "revision of the Quick Start profile.")
 }
 
-// GitOpsConfigLoader handles loading of ClusterConfigFile v.s. using CLI
-// flags for GitOps-related commands.
-type GitOpsConfigLoader struct {
+// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
+// GitConfigLoader handles loading of ClusterConfigFile v.s. using CLI
+// flags for Git-related commands.
+type GitConfigLoader struct {
 	cmd                                *Cmd
 	flagsIncompatibleWithConfigFile    sets.String
 	flagsIncompatibleWithoutConfigFile sets.String
@@ -95,11 +96,12 @@ type GitOpsConfigLoader struct {
 	gitConfig                          *api.Git
 }
 
-// NewGitOpsConfigLoader creates a new ClusterConfigLoader which handles
-// loading of ClusterConfigFile v.s. using CLI flags for GitOps-related
+// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
+// NewGitConfigLoader creates a new ClusterConfigLoader which handles
+// loading of ClusterConfigFile v.s. using CLI flags for Git-related
 // commands.
-func NewGitOpsConfigLoader(cmd *Cmd, cfg *api.Git) *GitOpsConfigLoader {
-	l := &GitOpsConfigLoader{
+func NewGitConfigLoader(cmd *Cmd, cfg *api.Git) *GitConfigLoader {
+	l := &GitConfigLoader{
 		cmd: cmd,
 		flagsIncompatibleWithConfigFile: sets.NewString(
 			"region",
@@ -118,6 +120,8 @@ func NewGitOpsConfigLoader(cmd *Cmd, cfg *api.Git) *GitOpsConfigLoader {
 			"amend",
 			profileName,
 			profileRevision,
+			additionalFluxArgs,
+			additionalHelmOperatorArgs,
 		),
 		flagsIncompatibleWithoutConfigFile: sets.NewString(),
 	}
@@ -162,9 +166,10 @@ func NewGitOpsConfigLoader(cmd *Cmd, cfg *api.Git) *GitOpsConfigLoader {
 	return l
 }
 
+// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
 // WithRepoValidation adds extra validation to make sure that the git url and the email are provided as they
 // are required for the commands enable profile and enable repo (but not for generate profile)
-func (l *GitOpsConfigLoader) WithRepoValidation() *GitOpsConfigLoader {
+func (l *GitConfigLoader) WithRepoValidation() *GitConfigLoader {
 	newLoader := *l
 	newLoader.validateWithoutConfigFile = func() error {
 		if newLoader.cmd.ClusterConfig.Git.Repo.URL == "" {
@@ -184,20 +189,26 @@ func (l *GitOpsConfigLoader) WithRepoValidation() *GitOpsConfigLoader {
 	newLoader.validateWithConfigFile = func() error {
 		repo := newLoader.cmd.ClusterConfig.Git.Repo
 		if repo == nil || repo.URL == "" {
-			return ErrMustBeSet("git.repo.URL")
+			return ErrMustBeSet("git.repo.url")
 		}
 
 		if repo.Email == "" {
 			return ErrMustBeSet("git.repo.email")
 		}
+
+		if l.cmd.ClusterConfig.GitOps != nil {
+			return errors.New("config cannot be provided for gitops alongside git")
+		}
+
 		return l.validateWithConfigFile()
 	}
 	return &newLoader
 }
 
+// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
 // WithProfileValidation adds extra validation to make sure that the git url and the email are provided as they
 // are required for the commands enable profile and enable repo (but not for generate profile)
-func (l *GitOpsConfigLoader) WithProfileValidation() *GitOpsConfigLoader {
+func (l *GitConfigLoader) WithProfileValidation() *GitConfigLoader {
 	newLoader := *l
 	newLoader.validateWithoutConfigFile = func() error {
 		if !newLoader.cmd.ClusterConfig.HasBootstrapProfile() {
@@ -211,16 +222,20 @@ func (l *GitOpsConfigLoader) WithProfileValidation() *GitOpsConfigLoader {
 		if !newLoader.cmd.ClusterConfig.HasBootstrapProfile() {
 			return ErrMustBeSet("git.bootstrapProfile.Source")
 		}
+
 		return l.validateWithConfigFile()
 	}
 	return &newLoader
 }
 
+// FLUX V1 DEPRECATION NOTICE. https://github.com/weaveworks/eksctl/issues/2963
 // Load ClusterConfig or use CLI flags.
-func (l *GitOpsConfigLoader) Load() error {
+func (l *GitConfigLoader) Load() error {
 	if err := api.Register(); err != nil {
 		return err
 	}
+
+	logger.Warning("the `enable repo` command and related git.X are marked for deprecation: Please see https://github.com/weaveworks/eksctl/issues/2963")
 
 	if l.cmd.ClusterConfigFile == "" {
 		l.cmd.ClusterConfig.Metadata.Region = l.cmd.ProviderConfig.Region
@@ -241,16 +256,15 @@ func (l *GitOpsConfigLoader) Load() error {
 		return l.validateWithoutConfigFile()
 	}
 
-	var err error
-
 	// The reference to ClusterConfig should only be reassigned if ClusterConfigFile is specified
 	// because other parts of the code store the pointer locally and access it directly instead of via
 	// the Cmd reference
+	var err error
 	if l.cmd.ClusterConfig, err = eks.LoadConfigFromFile(l.cmd.ClusterConfigFile); err != nil {
 		return err
 	}
-	meta := l.cmd.ClusterConfig.Metadata
 
+	meta := l.cmd.ClusterConfig.Metadata
 	if meta == nil {
 		return ErrMustBeSet("metadata")
 	}
@@ -266,5 +280,87 @@ func (l *GitOpsConfigLoader) Load() error {
 	}
 
 	api.SetDefaultGitSettings(l.cmd.ClusterConfig)
+	return l.validateWithConfigFile()
+}
+
+// GitOpsConfigLoader handles loading of ClusterConfigFile v.s. using CLI
+// flags for GitOps-related commands.
+type GitOpsConfigLoader struct {
+	cmd                    *Cmd
+	validateWithConfigFile func() error
+}
+
+// NewGitOpsConfigLoader creates a new ClusterConfigLoader which handles
+// loading of ClusterConfigFile GitOps-related commands.
+func NewGitOpsConfigLoader(cmd *Cmd) *GitOpsConfigLoader {
+	l := &GitOpsConfigLoader{
+		cmd: cmd,
+	}
+
+	l.validateWithConfigFile = func() error {
+		meta := l.cmd.ClusterConfig.Metadata
+		if meta.Name == "" {
+			return ErrMustBeSet("metadata.name")
+		}
+
+		if meta.Region == "" {
+			return ErrMustBeSet("metadata.region")
+		}
+
+		if l.cmd.ClusterConfig.Git != nil {
+			return errors.New("config cannot be provided for git.repo, git.bootstrapProfile or git.operator alongside gitops.*")
+		}
+
+		if l.cmd.ClusterConfig.GitOps.Flux == nil {
+			return errors.New("no configuration found for enable flux")
+		}
+
+		fluxCfg := l.cmd.ClusterConfig.GitOps.Flux
+		if fluxCfg.Repository == "" {
+			return ErrMustBeSet("gitops.flux.repository")
+		}
+
+		if fluxCfg.GitProvider == "" {
+			return ErrMustBeSet("gitops.flux.gitProvider")
+		}
+
+		if fluxCfg.Owner == "" {
+			return ErrMustBeSet("gitops.flux.owner")
+		}
+
+		return nil
+	}
+
+	return l
+}
+
+// Load ClusterConfig or use CLI flags.
+func (l *GitOpsConfigLoader) Load() error {
+	if err := api.Register(); err != nil {
+		return err
+	}
+
+	if l.cmd.ClusterConfigFile == "" {
+		return ErrMustBeSet("--config-file/-f <file>")
+	}
+
+	// The reference to ClusterConfig should only be reassigned if ClusterConfigFile is specified
+	// because other parts of the code store the pointer locally and access it directly instead of via
+	// the Cmd reference
+	var err error
+	if l.cmd.ClusterConfig, err = eks.LoadConfigFromFile(l.cmd.ClusterConfigFile); err != nil {
+		return err
+	}
+
+	meta := l.cmd.ClusterConfig.Metadata
+	if meta == nil {
+		return ErrMustBeSet("metadata")
+	}
+
+	if meta.Region != "" {
+		l.cmd.ProviderConfig.Region = meta.Region
+	}
+
+	api.SetDefaultGitOpsSettings(l.cmd.ClusterConfig)
 	return l.validateWithConfigFile()
 }

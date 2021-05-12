@@ -3,6 +3,7 @@
 package crud
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +12,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/weaveworks/eksctl/pkg/utils/file"
+
+	"k8s.io/client-go/kubernetes"
+
+	awseks "github.com/aws/aws-sdk-go/service/eks"
+	harness "github.com/dlespiau/kube-test-harness"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 	. "github.com/weaveworks/eksctl/integration/matchers"
 	. "github.com/weaveworks/eksctl/integration/runner"
 	"github.com/weaveworks/eksctl/integration/tests"
@@ -20,13 +30,6 @@ import (
 	"github.com/weaveworks/eksctl/pkg/iam"
 	iamoidc "github.com/weaveworks/eksctl/pkg/iam/oidc"
 	"github.com/weaveworks/eksctl/pkg/testutils"
-	"github.com/weaveworks/eksctl/pkg/utils/file"
-
-	awseks "github.com/aws/aws-sdk-go/service/eks"
-	harness "github.com/dlespiau/kube-test-harness"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
@@ -61,6 +64,37 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 			params.KubeconfigPath = f.Name()
 			params.KubeconfigTemp = true
 		}
+
+		if params.SkipCreate {
+			fmt.Fprintf(GinkgoWriter, "will use existing cluster %s", params.ClusterName)
+			if !file.Exists(params.KubeconfigPath) {
+				// Generate the Kubernetes configuration that eksctl create
+				// would have generated otherwise:
+				cmd := params.EksctlUtilsCmd.WithArgs(
+					"write-kubeconfig",
+					"--verbose", "4",
+					"--cluster", params.ClusterName,
+					"--kubeconfig", params.KubeconfigPath,
+				)
+				Expect(cmd).To(RunSuccessfully())
+			}
+			return
+		}
+
+		fmt.Fprintf(GinkgoWriter, "Using kubeconfig: %s\n", params.KubeconfigPath)
+
+		cmd := params.EksctlCreateCmd.WithArgs(
+			"cluster",
+			"--verbose", "4",
+			"--name", params.ClusterName,
+			"--tags", "alpha.eksctl.io/description=eksctl integration test",
+			"--nodegroup-name", initNG,
+			"--node-labels", "ng-name="+initNG,
+			"--nodes", "1",
+			"--version", params.Version,
+			"--kubeconfig", params.KubeconfigPath,
+		)
+		Expect(cmd).To(RunSuccessfully())
 	})
 
 	AfterSuite(func() {
@@ -72,40 +106,7 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 		os.RemoveAll(params.TestDirectory)
 	})
 
-	Describe("when creating a cluster with 1 node", func() {
-		It("should not return an error", func() {
-			if params.SkipCreate {
-				fmt.Fprintf(GinkgoWriter, "will use existing cluster %s", params.ClusterName)
-				if !file.Exists(params.KubeconfigPath) {
-					// Generate the Kubernetes configuration that eksctl create
-					// would have generated otherwise:
-					cmd := params.EksctlUtilsCmd.WithArgs(
-						"write-kubeconfig",
-						"--verbose", "4",
-						"--cluster", params.ClusterName,
-						"--kubeconfig", params.KubeconfigPath,
-					)
-					Expect(cmd).To(RunSuccessfully())
-				}
-				return
-			}
-
-			fmt.Fprintf(GinkgoWriter, "Using kubeconfig: %s\n", params.KubeconfigPath)
-
-			cmd := params.EksctlCreateCmd.WithArgs(
-				"cluster",
-				"--verbose", "4",
-				"--name", params.ClusterName,
-				"--tags", "alpha.eksctl.io/description=eksctl integration test",
-				"--nodegroup-name", initNG,
-				"--node-labels", "ng-name="+initNG,
-				"--nodes", "1",
-				"--version", params.Version,
-				"--kubeconfig", params.KubeconfigPath,
-			)
-			Expect(cmd).To(RunSuccessfully())
-		})
-
+	Describe("cluster with 1 node", func() {
 		It("should have created an EKS cluster and two CloudFormation stacks", func() {
 			awsSession := NewSession(params.Region)
 
@@ -134,6 +135,57 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 			})
 		})
 
+		Context("toggling kubernetes API access", func() {
+			var (
+				clientSet *kubernetes.Clientset
+			)
+			BeforeEach(func() {
+				cfg := &api.ClusterConfig{
+					Metadata: &api.ClusterMeta{
+						Name:   params.ClusterName,
+						Region: params.Region,
+					},
+				}
+				ctl, err := eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
+				Expect(err).NotTo(HaveOccurred())
+				err = ctl.RefreshClusterStatus(cfg)
+				Expect(err).ShouldNot(HaveOccurred())
+				clientSet, err = ctl.NewStdClientSet(cfg)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("should be publicly accessible by default", func() {
+				_, err := clientSet.CoreV1().ServiceAccounts(metav1.NamespaceDefault).List(context.TODO(), metav1.ListOptions{})
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("should be able to disable public access", func() {
+				cmd := params.EksctlUtilsCmd.WithArgs(
+					"set-public-access-cidrs",
+					"--cluster", params.ClusterName,
+					"1.1.1.1/32,2.2.2.0/24",
+					"--approve",
+				)
+				Expect(cmd).To(RunSuccessfully())
+
+				_, err := clientSet.CoreV1().ServiceAccounts(metav1.NamespaceDefault).List(context.TODO(), metav1.ListOptions{})
+				Expect(err).Should(HaveOccurred())
+			})
+
+			It("should be able to re-enable public access", func() {
+				cmd := params.EksctlUtilsCmd.WithArgs(
+					"set-public-access-cidrs",
+					"--cluster", params.ClusterName,
+					"0.0.0.0/0",
+					"--approve",
+				)
+				Expect(cmd).To(RunSuccessfully())
+
+				_, err := clientSet.CoreV1().ServiceAccounts(metav1.NamespaceDefault).List(context.TODO(), metav1.ListOptions{})
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+		})
+
 		Context("and scale the initial nodegroup", func() {
 			It("should not return an error", func() {
 				cmd := params.EksctlScaleNodeGroupCmd.WithArgs(
@@ -147,12 +199,13 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 			})
 		})
 
-		Context("and add the second nodegroup", func() {
-			It("should not return an error", func() {
+		Context("and add a second (GPU) nodegroup", func() {
+			PIt("should not return an error", func() {
 				cmd := params.EksctlCreateCmd.WithArgs(
 					"nodegroup",
 					"--cluster", params.ClusterName,
-					"--nodes", "4",
+					"--nodes", "1",
+					"--node-type", "p2.xlarge",
 					"--node-private-networking",
 					testNG,
 				)
@@ -173,29 +226,33 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 						Not(ContainElement(testNG)),
 					)))
 				}
+				//{
+				//	cmd := params.EksctlGetCmd.WithArgs(
+				//		"nodegroup",
+				//		"-o", "json",
+				//		"--cluster", params.ClusterName,
+				//		testNG,
+				//	)
+				//	Expect(cmd).To(RunSuccessfullyWithOutputString(BeNodeGroupsWithNamesWhich(
+				//		HaveLen(1),
+				//		ContainElement(testNG),
+				//		Not(ContainElement(initNG)),
+				//	)))
+				//}
 				{
 					cmd := params.EksctlGetCmd.WithArgs(
 						"nodegroup",
 						"-o", "json",
 						"--cluster", params.ClusterName,
-						testNG,
 					)
+					//Expect(cmd).To(RunSuccessfullyWithOutputString(BeNodeGroupsWithNamesWhich(
+					//	HaveLen(2),
+					//	ContainElement(initNG),
+					//	ContainElement(testNG),
+					//)))
 					Expect(cmd).To(RunSuccessfullyWithOutputString(BeNodeGroupsWithNamesWhich(
 						HaveLen(1),
-						ContainElement(testNG),
-						Not(ContainElement(initNG)),
-					)))
-				}
-				{
-					cmd := params.EksctlGetCmd.WithArgs(
-						"nodegroup",
-						"-o", "json",
-						"--cluster", params.ClusterName,
-					)
-					Expect(cmd).To(RunSuccessfullyWithOutputString(BeNodeGroupsWithNamesWhich(
-						HaveLen(2),
 						ContainElement(initNG),
-						ContainElement(testNG),
 					)))
 				}
 			})
@@ -213,7 +270,9 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 							Region: params.Region,
 						},
 					}
-					ctl = eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
+					var err error
+					ctl, err = eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("should have all types disabled by default", func() {
@@ -322,7 +381,7 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 				})
 			})
 
-			Context("create and delete iamserviceaccounts", func() {
+			Context("create, update, and delete iamserviceaccounts", func() {
 				var (
 					cfg  *api.ClusterConfig
 					ctl  *eks.ClusterProvider
@@ -337,14 +396,15 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 							Region: params.Region,
 						},
 					}
-					ctl = eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
+					ctl, err = eks.New(&api.ProviderConfig{Region: params.Region}, cfg)
+					Expect(err).NotTo(HaveOccurred())
 					err = ctl.RefreshClusterStatus(cfg)
 					Expect(err).ShouldNot(HaveOccurred())
 					oidc, err = ctl.NewOpenIDConnectManager(cfg)
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
-				It("should enable OIDC and create two iamserviceaccounts", func() {
+				It("should enable OIDC, create two iamserviceaccounts and update the policies", func() {
 					{
 						exists, err := oidc.CheckProviderExists()
 						Expect(err).ShouldNot(HaveOccurred())
@@ -396,7 +456,7 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 					Expect(err).ShouldNot(HaveOccurred())
 
 					{
-						sa, err := clientSet.CoreV1().ServiceAccounts(metav1.NamespaceDefault).Get("s3-read-only", metav1.GetOptions{})
+						sa, err := clientSet.CoreV1().ServiceAccounts(metav1.NamespaceDefault).Get(context.TODO(), "s3-read-only", metav1.GetOptions{})
 						Expect(err).ShouldNot(HaveOccurred())
 
 						Expect(sa.Annotations).To(HaveLen(1))
@@ -405,13 +465,26 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 					}
 
 					{
-						sa, err := clientSet.CoreV1().ServiceAccounts("app1").Get("app-cache-access", metav1.GetOptions{})
+						sa, err := clientSet.CoreV1().ServiceAccounts("app1").Get(context.TODO(), "app-cache-access", metav1.GetOptions{})
 						Expect(err).ShouldNot(HaveOccurred())
 
 						Expect(sa.Annotations).To(HaveLen(1))
 						Expect(sa.Annotations).To(HaveKey(api.AnnotationEKSRoleARN))
 						Expect(sa.Annotations[api.AnnotationEKSRoleARN]).To(MatchRegexp("^arn:aws:iam::.*:role/eksctl-" + truncate(params.ClusterName) + ".*$"))
 					}
+
+					cmds = []Cmd{
+						params.EksctlUpdateCmd.WithArgs(
+							"iamserviceaccount",
+							"--cluster", params.ClusterName,
+							"--name", "app-cache-access",
+							"--namespace", "app1",
+							"--attach-policy-arn", "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+							"--approve",
+						),
+					}
+
+					Expect(cmds).To(RunSuccessfully())
 				})
 
 				It("should list both iamserviceaccounts", func() {
@@ -815,7 +888,7 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 			})
 
 			Context("and delete the second nodegroup", func() {
-				It("should not return an error", func() {
+				PIt("should not return an error", func() {
 					cmd := params.EksctlDeleteCmd.WithArgs(
 						"nodegroup",
 						"--verbose", "4",
@@ -834,6 +907,16 @@ var _ = Describe("(Integration) Create, Get, Scale & Delete", func() {
 					"--nodes-min", "1",
 					"--nodes", "1",
 					"--nodes-max", "1",
+					"--name", initNG,
+				)
+				Expect(cmd).To(RunSuccessfully())
+			})
+		})
+
+		Context("and drain the initial nodegroup", func() {
+			It("should not return an error", func() {
+				cmd := params.EksctlDrainNodeGroupCmd.WithArgs(
+					"--cluster", params.ClusterName,
 					"--name", initNG,
 				)
 				Expect(cmd).To(RunSuccessfully())

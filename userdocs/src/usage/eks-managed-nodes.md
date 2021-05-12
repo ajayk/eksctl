@@ -136,6 +136,7 @@ managedNodeGroups:
     volumeEncrypted: true
     disableIMDSv1: true
     overrideBootstrapCommand: |
+      #!/bin/bash
       /etc/eks/bootstrap.sh managed-cluster --kubelet-extra-args '--node-labels=eks.amazonaws.com/nodegroup=custom-ng,eks.amazonaws.com/nodegroup-image=ami-0e124de4755b2734d'
 ```
 
@@ -147,6 +148,12 @@ existing cluster:
 
 ```console
 $ eksctl create nodegroup --managed
+```
+
+Tip : if you are using a `ClusterConfig` file to describe your whole cluster, describe your new managed node group in its `managedNodeGroups` field and run\:
+
+```console
+$ eksctl create nodegroup --config-file=YOUR_CLUSTER.yaml
 ```
 
 ## Upgrading managed nodegroups
@@ -164,11 +171,17 @@ To upgrade a managed nodegroup to the latest AMI release version:
 eksctl upgrade nodegroup --name=managed-ng-1 --cluster=managed-cluster
 ```
 
-If a nodegroup is on Kubernetes 1.13, and the cluster's Kubernetes version is 1.14, the nodegroup can be upgraded to
-the latest AMI release for Kubernetes 1.14 using:
+If a nodegroup is on Kubernetes 1.14, and the cluster's Kubernetes version is 1.15, the nodegroup can be upgraded to
+the latest AMI release for Kubernetes 1.15 using:
 
 ```console
-eksctl upgrade nodegroup --name=managed-ng-1 --cluster=managed-cluster --kubernetes-version=1.14
+eksctl upgrade nodegroup --name=managed-ng-1 --cluster=managed-cluster --kubernetes-version=1.15
+```
+
+To upgrade to a specific AMI release version instead of the latest version, pass `--release-version`:
+
+```console
+eksctl upgrade nodegroup --name=managed-ng-1 --cluster=managed-cluster --release-version=1.19.6-20210310
 ```
 
 ## Nodegroup Health issues
@@ -222,7 +235,7 @@ They do not propagate to the provisioned Autoscaling Group like in unmanaged nod
 - The `amiFamily` field supports only `AmazonLinux2`
 - `instancesDistribution` field is not supported
 - Full control over the node bootstrapping process and customization of the kubelet are not supported. This includes the
-following fields: `classicLoadBalancerNames`, `taints`, `targetGroupARNs`, `clusterDNS` and `kubeletExtraConfig`.
+following fields: `classicLoadBalancerNames`, `targetGroupARNs`, `clusterDNS` and `kubeletExtraConfig`.
 - No support for enabling metrics on AutoScalingGroups using `asgMetricsCollection`
 
 ## Note for eksctl versions below 0.12.0
@@ -241,4 +254,3 @@ the naming convention `eksctl-<cluster>-cluster-ClusterSharedNodeSecurityGroup-<
 - [EKS Managed Nodegroups][eks-user-guide]
 
 [eks-user-guide]: https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html
-

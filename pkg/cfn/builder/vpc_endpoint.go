@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-
 	"github.com/pkg/errors"
 
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
@@ -18,23 +18,20 @@ import (
 
 // A VPCEndpointResourceSet represents the resources required for VPC endpoints
 type VPCEndpointResourceSet struct {
-	provider        provider
+	ec2API          ec2iface.EC2API
+	region          string
 	rs              *resourceSet
 	vpc             *gfnt.Value
 	clusterConfig   *api.ClusterConfig
-	subnets         []subnetResource
+	subnets         []SubnetResource
 	clusterSharedSG *gfnt.Value
 }
 
-type provider interface {
-	EC2() ec2iface.EC2API
-	Region() string
-}
-
 // NewVPCEndpointResourceSet creates a new VPCEndpointResourceSet
-func NewVPCEndpointResourceSet(provider provider, rs *resourceSet, clusterConfig *api.ClusterConfig, vpc *gfnt.Value, subnets []subnetResource, clusterSharedSG *gfnt.Value) *VPCEndpointResourceSet {
+func NewVPCEndpointResourceSet(ec2API ec2iface.EC2API, region string, rs *resourceSet, clusterConfig *api.ClusterConfig, vpc *gfnt.Value, subnets []SubnetResource, clusterSharedSG *gfnt.Value) *VPCEndpointResourceSet {
 	return &VPCEndpointResourceSet{
-		provider:        provider,
+		ec2API:          ec2API,
+		region:          region,
 		rs:              rs,
 		clusterConfig:   clusterConfig,
 		vpc:             vpc,
@@ -45,10 +42,10 @@ func NewVPCEndpointResourceSet(provider provider, rs *resourceSet, clusterConfig
 
 // VPCEndpointServiceDetails holds the details for a VPC endpoint service
 type VPCEndpointServiceDetails struct {
-	ServiceName       string
-	Service           string
-	EndpointType      string
-	AvailabilityZones []string
+	ServiceName         string
+	ServiceReadableName string
+	EndpointType        string
+	AvailabilityZones   []string
 }
 
 // AddResources adds resources for VPC endpoints
@@ -57,7 +54,7 @@ func (e *VPCEndpointResourceSet) AddResources() error {
 	if e.clusterConfig.HasClusterCloudWatchLogging() && !e.hasEndpoint(api.EndpointServiceCloudWatch) {
 		endpointServices = append(endpointServices, api.EndpointServiceCloudWatch)
 	}
-	endpointServiceDetails, err := BuildVPCEndpointServices(e.provider.EC2(), e.provider.Region(), endpointServices)
+	endpointServiceDetails, err := buildVPCEndpointServices(e.ec2API, e.region, endpointServices)
 	if err != nil {
 		return errors.Wrap(err, "error building endpoint service details")
 	}
@@ -78,7 +75,7 @@ func (e *VPCEndpointResourceSet) AddResources() error {
 		}
 
 		resourceName := fmt.Sprintf("VPCEndpoint%s", strings.ToUpper(
-			strings.ReplaceAll(endpointDetail.Service, ".", ""),
+			strings.ReplaceAll(endpointDetail.ServiceReadableName, ".", ""),
 		))
 
 		// TODO attach policy document
@@ -123,16 +120,27 @@ func (e *VPCEndpointResourceSet) hasEndpoint(endpoint string) bool {
 	return false
 }
 
-// BuildVPCEndpointServices builds a slice of VPCEndpointServiceDetails for the specified endpoint names
-func BuildVPCEndpointServices(ec2API ec2iface.EC2API, region string, endpoints []string) ([]VPCEndpointServiceDetails, error) {
+var chinaPartitionServiceHasChinaPrefix = map[string]bool{
+	api.EndpointServiceEC2:            true,
+	api.EndpointServiceECRAPI:         true,
+	api.EndpointServiceECRDKR:         true,
+	api.EndpointServiceS3:             false,
+	api.EndpointServiceSTS:            true,
+	api.EndpointServiceCloudFormation: true,
+	api.EndpointServiceAutoscaling:    true,
+	api.EndpointServiceCloudWatch:     false,
+}
+
+// buildVPCEndpointServices builds a slice of VPCEndpointServiceDetails for the specified endpoint names
+func buildVPCEndpointServices(ec2API ec2iface.EC2API, region string, endpoints []string) ([]VPCEndpointServiceDetails, error) {
 	serviceNames := make([]string, len(endpoints))
-	servicePrefix := ""
-	if api.Partition(region) == api.PartitionChina {
-		servicePrefix = "cn."
-	}
-	serviceRegionPrefix := fmt.Sprintf("%scom.amazonaws.%s.", servicePrefix, region)
+	serviceDomain := fmt.Sprintf("com.amazonaws.%s", region)
 	for i, endpoint := range endpoints {
-		serviceNames[i] = serviceRegionPrefix + endpoint
+		serviceName, err := makeServiceName(region, endpoint)
+		if err != nil {
+			return nil, err
+		}
+		serviceNames[i] = serviceName
 	}
 
 	var serviceDetails []*ec2.ServiceDetail
@@ -151,29 +159,71 @@ func BuildVPCEndpointServices(ec2API ec2iface.EC2API, region string, endpoints [
 		})
 
 		if err != nil {
+			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "InvalidServiceName" {
+				return nil, &api.UnsupportedFeatureError{
+					Message: fmt.Sprintf("fully-private clusters are not supported in region %q, please retry with a different region", region),
+					Err:     err,
+				}
+			}
 			return nil, errors.Wrap(err, "error describing VPC endpoint services")
 		}
-		serviceDetails = append(serviceDetails, output.ServiceDetails...)
 
+		serviceDetails = append(serviceDetails, output.ServiceDetails...)
 		if nextToken = output.NextToken; nextToken == nil {
 			break
 		}
 	}
 
-	ret := make([]VPCEndpointServiceDetails, len(serviceDetails))
+	var ret []VPCEndpointServiceDetails
+	s3EndpointName, err := makeServiceName(region, api.EndpointServiceS3)
+	if err != nil {
+		return nil, err
+	}
 
-	for i, sd := range serviceDetails {
+	for _, sd := range serviceDetails {
 		if len(sd.ServiceType) > 1 {
 			return nil, errors.Errorf("endpoint service %q with multiple service types isn't supported", *sd.ServiceName)
 		}
 
-		ret[i] = VPCEndpointServiceDetails{
-			ServiceName:       *sd.ServiceName,
-			Service:           strings.TrimPrefix(*sd.ServiceName, serviceRegionPrefix),
-			EndpointType:      *sd.ServiceType[0].ServiceType,
-			AvailabilityZones: aws.StringValueSlice(sd.AvailabilityZones),
+		endpointType := *sd.ServiceType[0].ServiceType
+		if !serviceEndpointTypeExpected(*sd.ServiceName, endpointType, s3EndpointName) {
+			continue
 		}
+
+		// Trim the domain (potentially with a partition-specific part) from the `ServiceName`
+		parts := strings.Split(*sd.ServiceName, fmt.Sprintf("%s.", serviceDomain))
+		if len(parts) != 2 {
+			return nil, errors.Errorf("error parsing service name %s %s", *sd.ServiceName, serviceDomain)
+		}
+		readableName := parts[1]
+
+		ret = append(ret, VPCEndpointServiceDetails{
+			ServiceName:         *sd.ServiceName,
+			ServiceReadableName: readableName,
+			EndpointType:        endpointType,
+			AvailabilityZones:   aws.StringValueSlice(sd.AvailabilityZones),
+		})
 	}
 
 	return ret, nil
+}
+
+// serviceEndpointTypeExpected returns true if the endpoint service is expected to use the specified endpoint type
+func serviceEndpointTypeExpected(serviceName, endpointType, s3EndpointName string) bool {
+	if serviceName == s3EndpointName {
+		return endpointType == ec2.VpcEndpointTypeGateway
+	}
+	return endpointType == ec2.VpcEndpointTypeInterface
+}
+
+func makeServiceName(region, endpoint string) (string, error) {
+	serviceName := fmt.Sprintf("com.amazonaws.%s.%s", region, endpoint)
+	hasChinaPrefix, ok := chinaPartitionServiceHasChinaPrefix[endpoint]
+	if !ok {
+		return "", errors.Errorf("couldn't determine endpoint domain for service %s", endpoint)
+	}
+	if api.Partition(region) == api.PartitionChina && hasChinaPrefix {
+		serviceName = "cn." + serviceName
+	}
+	return serviceName, nil
 }

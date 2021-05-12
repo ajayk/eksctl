@@ -27,7 +27,7 @@ func deleteIAMIdentityMappingCmd(cmd *cmdutils.Cmd) {
 
 	cmd.FlagSetGroup.InFlagSet("General", func(fs *pflag.FlagSet) {
 		fs.BoolVar(&all, "all", false, "Delete all matching mappings instead of just one")
-		cmdutils.AddIAMIdentityMappingARNFlags(fs, cmd, &arn)
+		cmdutils.AddIAMIdentityMappingARNFlags(fs, cmd, &arn, "delete")
 		cmdutils.AddClusterFlagWithDeprecated(fs, cfg.Metadata)
 		cmdutils.AddRegionFlag(fs, &cmd.ProviderConfig)
 		cmdutils.AddConfigFileFlag(fs, &cmd.ClusterConfigFile)
@@ -49,10 +49,6 @@ func doDeleteIAMIdentityMapping(cmd *cmdutils.Cmd, arn string, all bool) error {
 		return err
 	}
 	cmdutils.LogRegionAndVersionInfo(cfg.Metadata)
-
-	if err := ctl.CheckAuth(); err != nil {
-		return err
-	}
 
 	if arn == "" {
 		return cmdutils.ErrMustBeSet("--arn")

@@ -1,21 +1,22 @@
 package unset
 
 import (
+	"github.com/kris-nova/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/weaveworks/eksctl/pkg/actions/label"
 	"github.com/weaveworks/eksctl/pkg/cfn/manager"
 	"github.com/weaveworks/eksctl/pkg/managed"
 
 	api "github.com/weaveworks/eksctl/pkg/apis/eksctl.io/v1alpha5"
 	"github.com/weaveworks/eksctl/pkg/ctl/cmdutils"
-	"github.com/weaveworks/eksctl/pkg/eks"
 )
 
 func unsetLabelsCmd(cmd *cmdutils.Cmd) {
 	cfg := api.NewClusterConfig()
 	cmd.ClusterConfig = cfg
 
-	cmd.SetDescription("labels", "Create removeLabels", "")
+	cmd.SetDescription("labels", "Remove labels from managed nodegroups", "")
 
 	var (
 		nodeGroupName string
@@ -46,18 +47,27 @@ func unsetLabels(cmd *cmdutils.Cmd, nodeGroupName string, removeLabels []string)
 	if cfg.Metadata.Name == "" {
 		return cmdutils.ErrMustBeSet(cmdutils.ClusterNameFlag(cmd))
 	}
+	if nodeGroupName == "" {
+		return cmdutils.ErrMustBeSet("--nodegroup")
+	}
 
 	if cmd.NameArg != "" {
 		return cmdutils.ErrUnsupportedNameArg()
 	}
 
-	ctl := eks.New(&cmd.ProviderConfig, cmd.ClusterConfig)
+	ctl, err := cmd.NewCtl()
+	if err != nil {
+		return err
+	}
+	cmdutils.LogRegionAndVersionInfo(cmd.ClusterConfig.Metadata)
+	logger.Info("removing label(s) from nodegroup %s in cluster %s", nodeGroupName, cmd.ClusterConfig.Metadata)
 
-	if err := ctl.CheckAuth(); err != nil {
+	service := managed.NewService(ctl.Provider.EKS(), ctl.Provider.SSM(), ctl.Provider.EC2(), manager.NewStackCollection(ctl.Provider, cfg), cfg.Metadata.Name)
+	manager := label.New(cfg.Metadata.Name, service, ctl.Provider.EKS())
+	if err := manager.Unset(nodeGroupName, removeLabels); err != nil {
 		return err
 	}
 
-	stackCollection := manager.NewStackCollection(ctl.Provider, cfg)
-	managedService := managed.NewService(ctl.Provider, stackCollection, cfg.Metadata.Name)
-	return managedService.UpdateLabels(nodeGroupName, nil, removeLabels)
+	logger.Info("done")
+	return nil
 }
